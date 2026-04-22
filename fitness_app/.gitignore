@@ -1,0 +1,23 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Plattform-Ordner werden von `flutter create .` erzeugt.
+# Wir halten das Repo klein – bei Bedarf entfernen, wenn sie committet werden sollen.
+android/
+ios/
+macos/
+linux/
+windows/
+web/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
