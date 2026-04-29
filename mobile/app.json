@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Dared",
+    "slug": "dared",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "dared",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.dared.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Dared needs your camera to record proof of completed challenges.",
+        "NSMicrophoneUsageDescription": "Dared needs your microphone to record audio with your challenge proof.",
+        "NSPhotoLibraryUsageDescription": "Dared needs access to save your challenge proofs."
+      }
+    },
+    "android": {
+      "package": "com.dared.app",
+      "permissions": ["CAMERA", "RECORD_AUDIO"]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Dared needs your camera to record proof of completed challenges."
+        }
+      ],
+      "expo-screen-capture",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
