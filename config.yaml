@@ -1,53 +1,46 @@
 # Configuración del asistente Jarvis local
 
 wake_word:
-  # Modelo preentrenado de openwakeword. "hey_jarvis" es el más cercano a "Jarvis".
-  # Si quieres una palabra distinta, entrena tu propio modelo y colócalo en models/
   model: "hey_jarvis"
-  # Umbral de activación (0.0 - 1.0). Más alto = menos falsos positivos.
   threshold: 0.5
-  # Frecuencia de muestreo del micrófono (openwakeword requiere 16 kHz).
   sample_rate: 16000
-  # Tamaño de bloque de audio (80 ms a 16 kHz).
   frame_length: 1280
 
 stt:
-  # Modelo Whisper: tiny, base, small, medium, large-v3
   model: "base"
-  # "cpu", "cuda" o "auto"
   device: "auto"
-  # "int8" es rápido en CPU; "float16" en GPU
   compute_type: "int8"
   language: "es"
-  # Segundos de silencio para terminar la grabación
   silence_duration: 1.2
-  # Umbral de energía para detectar silencio
   silence_threshold: 0.01
-  # Duración máxima de una petición en segundos
   max_record_seconds: 30
 
 tts:
   rate: 180
   volume: 1.0
-  # Nombre parcial de la voz (ej. "spanish", "mexican"). Deja vacío para usar la predeterminada.
   voice: "spanish"
 
 llm:
-  # URL del servidor Ollama local
+  # Backend: "ollama" (requiere Ollama instalado) o "llamacpp" (sin Ollama, solo Python)
+  backend: "ollama"
+
+  # --- Configuración para backend: ollama ---
   host: "http://localhost:11434"
-  # Modelo Ollama a usar. Recomendado: llama3.1, qwen2.5, mistral-nemo
   model: "llama3.1"
+
+  # --- Configuración para backend: llamacpp ---
+  # Descomenta estas líneas y cambia backend a "llamacpp" si no tienes Ollama.
+  # Descarga un modelo con: python scripts/download_model.py
+  # model_path: "models/qwen2.5-1.5b-instruct-q8_0.gguf"
+  # n_gpu_layers: 0        # 0 = CPU puro  |  -1 = todo en GPU (requiere CUDA)
+  # chat_format: null      # null = auto-detectar (recomendado)
+
   temperature: 0.2
-  num_ctx: 8192
+  num_ctx: 4096
 
 agent:
-  # Idioma del asistente
   language: "es"
-  # Nombre del asistente
   name: "Jarvis"
-  # Pedir confirmación antes de ejecutar comandos peligrosos (rm, formatear, etc.)
   confirm_dangerous: true
-  # Máximo número de iteraciones herramienta->LLM por petición
   max_iterations: 8
-  # Directorio raíz para operaciones de archivos. "~" = home.
   workspace_root: "~"

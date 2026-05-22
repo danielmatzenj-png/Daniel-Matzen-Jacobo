@@ -10,8 +10,8 @@ build/
 dist/
 .DS_Store
 Thumbs.db
-models/
+models/*.gguf
+models/*.bin
 *.onnx
-*.bin
 .idea/
 .vscode/

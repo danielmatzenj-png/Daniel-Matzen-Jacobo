@@ -16,7 +16,7 @@ import threading
 
 from .agent import Agent
 from .config import load_config
-from .llm import OllamaClient
+from .llm import LlamaCppClient, OllamaClient
 from .stt import SpeechToText
 from .tools import ToolRegistry
 from .tts import TextToSpeech
@@ -55,12 +55,22 @@ def main() -> None:
 
     print("[jarvis] Cargando modelos locales...", flush=True)
 
-    llm = OllamaClient(
-        host=cfg.get("llm.host", "http://localhost:11434"),
-        model=cfg.get("llm.model", "llama3.1"),
-        temperature=cfg.get("llm.temperature", 0.2),
-        num_ctx=cfg.get("llm.num_ctx", 8192),
-    )
+    backend = cfg.get("llm.backend", "ollama")
+    if backend == "llamacpp":
+        llm: OllamaClient | LlamaCppClient = LlamaCppClient(
+            model_path=cfg.get("llm.model_path", "models/model.gguf"),
+            temperature=cfg.get("llm.temperature", 0.2),
+            num_ctx=cfg.get("llm.num_ctx", 4096),
+            n_gpu_layers=cfg.get("llm.n_gpu_layers", 0),
+            chat_format=cfg.get("llm.chat_format", None),
+        )
+    else:
+        llm = OllamaClient(
+            host=cfg.get("llm.host", "http://localhost:11434"),
+            model=cfg.get("llm.model", "llama3.1"),
+            temperature=cfg.get("llm.temperature", 0.2),
+            num_ctx=cfg.get("llm.num_ctx", 8192),
+        )
     llm.ensure_model()
 
     tools = ToolRegistry(workspace_root=cfg.get("agent.workspace_root", "~"))
