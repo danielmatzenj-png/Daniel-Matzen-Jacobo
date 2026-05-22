@@ -56,9 +56,23 @@ ollama pull llama3.1
 
 ## Uso
 
+### Lanzamiento rápido (Windows)
+
+```powershell
+# Modo voz (dice "Jarvis" para activarse)
+.\scripts\run.ps1
+
+# Modo texto — sin micrófono, escribe tus peticiones
+.\scripts\run.ps1 --text
+```
+
+También puedes hacer **doble clic** en `scripts\run.bat`.
+
+### Lanzamiento manual
+
 ```bash
 source .venv/bin/activate        # Windows: .\.venv\Scripts\Activate.ps1
-python -m jarvis.main
+python -m jarvis
 ```
 
 Di "Jarvis". Cuando oigas la confirmación, pide lo que quieras. Ejemplos:
@@ -72,7 +86,7 @@ Di "Jarvis". Cuando oigas la confirmación, pide lo que quieras. Ejemplos:
 ### Modo texto (para probar sin micrófono)
 
 ```bash
-python -m jarvis.main --text
+python -m jarvis --text
 ```
 
 ## Configuración
