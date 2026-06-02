@@ -15,3 +15,7 @@ models/
 *.bin
 .idea/
 .vscode/
+polybot.log
+polybot-executor/node_modules/
+polybot-executor/dist/
+polybot-executor/.env

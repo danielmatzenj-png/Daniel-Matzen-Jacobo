@@ -1,0 +1,49 @@
+polybot:
+  mode: "dry_run"          # dry_run | live  → en dry_run NO envía órdenes reales
+  bankroll_usdc: 100.0     # capital total disponible en USDC (Polygon)
+  loop_interval_sec: 2.0   # cada cuánto reevalúa la decisión
+
+market:
+  # Polymarket cambia el slug cada ronda. Lo descubrimos vía API por nombre.
+  # Filtro: mercados binarios "Bitcoin Up or Down" cuyo cierre quede entre
+  # min_secs_to_close y max_secs_to_close.
+  search_query: "Bitcoin Up or Down"
+  min_secs_to_close: 60     # no entrar en los últimos 60s (alta varianza, slippage)
+  max_secs_to_close: 270    # entrar a partir de los ~4.5 min restantes
+
+binance:
+  symbol: "btcusdt"
+  ws_url: "wss://stream.binance.com:9443/ws"
+  rest_url: "https://api.binance.com"
+  # ventana en segundos para los features de momentum
+  momentum_short_sec: 30
+  momentum_long_sec: 120
+  vol_window_sec: 300
+
+signal:
+  # Coeficientes del modelo lineal sobre features estandarizados.
+  # Estos valores son un PUNTO DE PARTIDA basado en heurísticas;
+  # idealmente entrenas una regresión logística sobre histórico
+  # con backtest.py antes de pasar a `live`.
+  beta_momentum_short: 1.20
+  beta_momentum_long: 0.80
+  beta_vol_adjust: -0.30
+  bias: 0.0
+  # límites duros sobre P(up) para evitar over-confidence
+  p_min: 0.30
+  p_max: 0.70
+
+strategy:
+  min_edge: 0.05            # edge mínimo (probabilidad – precio) tras fees
+  kelly_fraction: 0.25      # Kelly fraccionado (conservador)
+  max_position_pct: 0.02    # máx 2% del bankroll por trade
+  taker_fee: 0.02           # ~2% fee asumida en Polymarket (ajusta si cambia)
+  min_size_usdc: 1.0        # tamaño mínimo de orden
+
+executor:
+  url: "http://127.0.0.1:8787"   # endpoint del ejecutor TypeScript
+  timeout_sec: 5.0
+
+logging:
+  level: "INFO"
+  file: "polybot.log"

@@ -1,0 +1,24 @@
+{
+  "name": "polybot-executor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ejecutor TypeScript que coloca órdenes en Polymarket CLOB.",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --enable-source-maps dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@polymarket/clob-client": "^4.14.0",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0",
+    "fastify": "^4.28.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "tsx": "^4.10.0",
+    "typescript": "^5.5.0"
+  }
+}
