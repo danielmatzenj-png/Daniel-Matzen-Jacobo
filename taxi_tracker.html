@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rastreador de Billetera — Taxi Sevilla</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:     #e74c3c;
+      --red-d:   #c0392b;
+      --blue:    #3498db;
+      --green:   #27ae60;
+      --orange:  #f39c12;
+      --yellow:  #FFD700;
+      --bg0:     #0d1b2a;
+      --bg1:     #1b2838;
+      --bg2:     #243447;
+      --bg3:     #2c3e50;
+      --txt:     #ecf0f1;
+      --txt2:    #95a5a6;
+      --border:  #34495e;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg0);
+      color: var(--txt);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─── HEADER ─────────────────────────────── */
+    #hdr {
+      background: linear-gradient(135deg, var(--red) 0%, var(--red-d) 100%);
+      padding: 0 18px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      box-shadow: 0 3px 12px rgba(231,76,60,.45);
+      z-index: 900;
+    }
+    #hdr .left { display: flex; align-items: center; gap: 12px; }
+    #hdr h1 { font-size: 16px; font-weight: 700; line-height: 1.2; }
+    #hdr .sub { font-size: 11px; opacity: .8; }
+    .pulse { width: 9px; height: 9px; background: #fff; border-radius: 50%;
+             animation: pulse 1.6s ease-in-out infinite; flex-shrink: 0; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.6)} }
+    #hdr .right { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+    .badge { background: rgba(0,0,0,.28); padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+
+    /* ─── LAYOUT ──────────────────────────────── */
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ─── SIDEBAR ─────────────────────────────── */
+    #sb {
+      width: 370px;
+      flex-shrink: 0;
+      background: var(--bg1);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #sb-scroll { flex: 1; overflow-y: auto; }
+    #sb-scroll::-webkit-scrollbar { width: 5px; }
+    #sb-scroll::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+    /* ─── STATUS BAR ──────────────────────────── */
+    #sbar {
+      background: var(--bg2);
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--orange);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ─── TABS ────────────────────────────────── */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab {
+      flex: 1; padding: 10px 4px; border: none; background: none;
+      color: var(--txt2); font-size: 11px; font-weight: 600; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: all .2s;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .tab.on { color: var(--red); border-bottom-color: var(--red); }
+    .tab-pane { display: none; }
+    .tab-pane.on { display: block; }
+
+    /* ─── SECTIONS ────────────────────────────── */
+    .sec { padding: 14px; border-bottom: 1px solid var(--border); }
+    .sec-title {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .9px; color: var(--txt2); margin-bottom: 11px;
+    }
+    .step { width: 20px; height: 20px; background: var(--red); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0; }
+
+    /* ─── FORM CONTROLS ───────────────────────── */
+    label { display: block; font-size: 11px; color: var(--txt2); margin-bottom: 3px; margin-top: 9px; }
+    label:first-child { margin-top: 0; }
+    input[type=text], input[type=datetime-local], select, textarea {
+      width: 100%; background: var(--bg0); border: 1px solid var(--border);
+      color: var(--txt); padding: 7px 10px; border-radius: 5px; font-size: 12px;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--red); }
+    textarea { resize: vertical; min-height: 60px; }
+
+    .row { display: flex; gap: 6px; }
+    .row input { flex: 1; }
+
+    .coord-box {
+      background: var(--bg0); border: 1px dashed var(--border);
+      border-radius: 5px; padding: 7px 10px; font-size: 11px;
+      color: var(--txt2); margin-top: 5px; font-family: monospace;
+    }
+    .coord-box.set { border-color: var(--green); color: var(--green); }
+
+    .hint { font-size: 10px; color: var(--orange); margin-top: 3px;
+            display: flex; align-items: center; gap: 5px; }
+
+    /* ─── BUTTONS ─────────────────────────────── */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      width: 100%; padding: 9px 14px; border: none; border-radius: 5px;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s;
+      margin-top: 7px;
+    }
+    .btn-red   { background: linear-gradient(135deg,var(--red),var(--red-d)); color: #fff; }
+    .btn-red:hover  { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(231,76,60,.4); }
+    .btn-ghost { background: var(--bg2); color: var(--txt); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--red); }
+    .btn-blue  { background: linear-gradient(135deg,#2980b9,var(--blue)); color: #fff; }
+    .btn-green { background: linear-gradient(135deg,#1e8449,var(--green)); color: #fff; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+    /* ─── SCENARIO PILLS ──────────────────────── */
+    .pills { display: flex; gap: 5px; margin-top: 8px; }
+    .pill {
+      flex: 1; padding: 7px 4px; border-radius: 5px; border: 1px solid var(--border);
+      background: var(--bg0); color: var(--txt2); font-size: 10px; cursor: pointer;
+      text-align: center; transition: all .2s; line-height: 1.4;
+    }
+    .pill.on { background: var(--red); border-color: var(--red); color: #fff; }
+
+    /* ─── SPEED SLIDER ────────────────────────── */
+    input[type=range] { width: 100%; accent-color: var(--red); margin-top: 4px; }
+    .slider-ends { display: flex; justify-content: space-between; font-size: 10px; color: var(--txt2); }
+
+    /* ─── RESULT CARDS ────────────────────────── */
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 8px; }
+    .card {
+      background: var(--bg0); border: 1px solid var(--border); border-radius: 7px;
+      padding: 11px; text-align: center;
+    }
+    .card .val { font-size: 24px; font-weight: 800; color: var(--red); }
+    .card .unit { font-size: 10px; color: var(--txt2); }
+    .card .lbl { font-size: 10px; color: var(--txt2); margin-top: 2px; }
+
+    /* ─── STAND LIST ──────────────────────────── */
+    .stand {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px; background: var(--bg0); border: 1px solid var(--border);
+      border-radius: 5px; margin-top: 5px; font-size: 11px; cursor: pointer;
+      transition: border-color .2s;
+    }
+    .stand:hover { border-color: var(--yellow); }
+    .stand-num {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #000; flex-shrink: 0;
+    }
+    .pbar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 3px; overflow: hidden; }
+    .pfill { height: 100%; border-radius: 2px; transition: width .6s; }
+
+    /* ─── COMPANY CARD ────────────────────────── */
+    .co-card {
+      background: var(--bg0); border: 1px solid var(--border);
+      border-left: 3px solid var(--red); border-radius: 6px;
+      padding: 12px; margin-top: 8px;
+    }
+    .co-name { font-weight: 700; font-size: 13px; }
+    .co-phone { font-size: 22px; font-weight: 800; color: var(--yellow); margin: 3px 0; }
+    .co-det { font-size: 11px; color: var(--txt2); line-height: 1.6; }
+    .copy-btn {
+      margin-top: 7px; padding: 4px 10px; background: none;
+      border: 1px solid var(--border); color: var(--txt2); border-radius: 4px;
+      font-size: 11px; cursor: pointer; transition: all .2s;
+    }
+    .copy-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* ─── ALERTS ──────────────────────────────── */
+    .alert {
+      padding: 8px 11px; border-radius: 5px; font-size: 11px;
+      display: flex; gap: 7px; align-items: flex-start; margin-top: 8px; line-height: 1.5;
+    }
+    .alert-warn { background: rgba(243,156,18,.12); border: 1px solid rgba(243,156,18,.3); color: var(--orange); }
+    .alert-info { background: rgba(52,152,219,.12); border: 1px solid rgba(52,152,219,.3); color: var(--blue); }
+
+    /* ─── SCRIPT BOX ──────────────────────────── */
+    .script-box {
+      background: var(--bg0); border: 1px solid var(--border);
+      border-radius: 5px; padding: 10px; font-size: 11px; line-height: 1.8;
+      color: var(--txt2); margin-top: 8px; font-style: italic;
+    }
+    .script-box b { color: var(--txt); font-style: normal; }
+    .highlight { color: var(--yellow); font-weight: 700; font-style: normal; }
+
+    /* ─── LEGEND ──────────────────────────────── */
+    .legend-row { display: flex; align-items: center; gap: 7px; font-size: 11px; margin-top: 5px; }
+    .leg-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ─── WAYPOINT LIST ───────────────────────── */
+    .wp-item {
+      display: flex; align-items: center; gap: 7px; padding: 6px 8px;
+      background: var(--bg0); border: 1px solid var(--border); border-radius: 5px; margin-top: 5px;
+    }
+    .wp-del { background: none; border: none; color: var(--red); cursor: pointer; font-size: 13px; margin-left: auto; }
+
+    /* ─── MAP ─────────────────────────────────── */
+    #map { flex: 1; }
+
+    /* ─── LEAFLET OVERRIDES ───────────────────── */
+    .leaflet-popup-content-wrapper { border-radius: 8px !important; }
+    .leaflet-popup-content { font-family: 'Segoe UI', sans-serif; font-size: 13px; }
+    .taxi-tooltip { background: rgba(0,0,0,.75); color: #FFD700; border: none;
+                    border-radius: 4px; font-size: 11px; padding: 3px 7px; }
+
+    /* ─── SPINNER ─────────────────────────────── */
+    .spin {
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,.3); border-radius: 50%;
+      border-top-color: #fff; animation: rot .7s linear infinite;
+    }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    /* ─── MULTI-PING SECTION ──────────────────── */
+    #ping-list { margin-top: 6px; }
+
+    @media (max-width: 700px) {
+      #sb { width: 100%; height: 45dvh; }
+      #main { flex-direction: column; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<div id="hdr">
+  <div class="left">
+    <div class="pulse"></div>
+    <div>
+      <h1>Rastreador de Billetera Perdida · Taxi Sevilla</h1>
+      <div class="sub">Análisis de ruta AirTag · Coordinación con centrales de taxi · Sevilla, España</div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="badge" id="mode-lbl">Modo: Exploración</div>
+    <div class="badge">⏱ <span id="timer">00:00</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN ════════════════ -->
+<div id="main">
+
+  <!-- ══ SIDEBAR ══ -->
+  <div id="sb">
+    <div id="sbar">
+      <i class="fas fa-circle-info"></i>
+      <span id="status-msg">Marca el punto de recogida y la última señal AirTag para comenzar</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab on" onclick="tab('track',this)"><i class="fas fa-crosshairs"></i> Rastreo</button>
+      <button class="tab" onclick="tab('contacts',this)"><i class="fas fa-phone"></i> Contactos</button>
+      <button class="tab" onclick="tab('pings',this)"><i class="fas fa-broadcast-tower"></i> Pings</button>
+      <button class="tab" onclick="tab('report',this)"><i class="fas fa-file-alt"></i> Informe</button>
+    </div>
+
+    <div id="sb-scroll">
+
+      <!-- ══ TAB: RASTREO ══ -->
+      <div id="pane-track" class="tab-pane on">
+
+        <!-- STEP 1 -->
+        <div class="sec">
+          <div class="sec-title"><div class="step">1</div> Punto de recogida del taxi</div>
+          <label>Buscar dirección:</label>
+          <div class="row">
+            <input type="text" id="pu-addr" placeholder="Ej: Calle Sierpes, Sevilla" onkeydown="if(event.key==='Enter')geoPickup()" />
+            <button class="btn btn-ghost" onclick="geoPickup()" style="width:auto;margin:0;padding:7px 10px;"><i class="fas fa-search"></i></button>
+          </div>
+          <div class="hint"><i class="fas fa-mouse-pointer"></i> O activa el modo y haz clic en el mapa</div>
+          <div class="coord-box" id="pu-coord">Sin ubicación seleccionada</div>
+          <button class="btn btn-ghost" onclick="modeSet('pickup')"><i class="fas fa-map-pin"></i> Marcar en mapa</button>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="sec">
+          <div class="sec-title"><div class="step">2</div> Última señal AirTag</div>
+          <label>Buscar dirección:</label>
+          <div class="row">
+            <input type="text" id="at-addr" placeholder="Ej: Av. de la Constitución, Sevilla" onkeydown="if(event.key==='Enter')geoAirtag()" />
+            <button class="btn btn-ghost" onclick="geoAirtag()" style="width:auto;margin:0;padding:7px 10px;"><i class="fas fa-search"></i></button>
+          </div>
+          <div class="hint"><i class="fas fa-broadcast-tower"></i> O activa el modo y haz clic en el mapa</div>
+          <div class="coord-box" id="at-coord">Sin ubicación seleccionada</div>
+          <button class="btn btn-ghost" onclick="modeSet('airtag')"><i class="fas fa-location-dot"></i> Marcar en mapa</button>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="sec">
+          <div class="sec-title"><div class="step">3</div> Hora del último ping AirTag</div>
+          <label>Fecha y hora exacta:</label>
+          <input type="datetime-local" id="ping-time" onchange="refreshTimeSince()" />
+          <div class="coord-box" id="time-since-box">Introduce la hora del último ping</div>
+          <div class="alert alert-info">
+            <i class="fas fa-circle-info"></i>
+            <span>Los AirTag actualizan su posición aprox. cada 1–15 min dependiendo de los dispositivos Apple cercanos.</span>
+          </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="sec">
+          <div class="sec-title"><div class="step">4</div> Escenario de velocidad</div>
+          <div class="pills">
+            <div class="pill on"  onclick="scenario('slow',this)">🚦 Lento<br><small>20 km/h<br>Centro/semáforos</small></div>
+            <div class="pill"     onclick="scenario('normal',this)">🚕 Normal<br><small>35 km/h<br>Ciudad media</small></div>
+            <div class="pill"     onclick="scenario('fast',this)">🛣️ Rápido<br><small>55 km/h<br>Ronda / SE-30</small></div>
+            <div class="pill"     onclick="scenario('hwy',this)">✈️ Aeropuerto<br><small>80 km/h<br>A-4 / A-49</small></div>
+          </div>
+          <label style="margin-top:10px;">Velocidad personalizada: <b id="spd-val">35</b> km/h</label>
+          <input type="range" id="spd-range" min="10" max="100" value="35" oninput="spdChange(this.value)" />
+          <div class="slider-ends"><span>10 km/h</span><span>100 km/h</span></div>
+        </div>
+
+        <!-- CALCULATE -->
+        <div class="sec">
+          <button class="btn btn-red" id="calc-btn" onclick="calculate()">
+            <i class="fas fa-route"></i> CALCULAR RUTA PROBABLE
+          </button>
+          <button class="btn btn-ghost" onclick="resetAll()">
+            <i class="fas fa-rotate-left"></i> Reiniciar todo
+          </button>
+        </div>
+
+        <!-- RESULTS -->
+        <div id="results" class="sec" style="display:none;">
+          <div class="sec-title"><i class="fas fa-chart-area" style="color:var(--red)"></i> Análisis de ruta</div>
+
+          <div class="cards">
+            <div class="card">
+              <div class="val" id="r-dist">--</div>
+              <div class="unit">km</div>
+              <div class="lbl">Ruta A→B confirmada</div>
+            </div>
+            <div class="card">
+              <div class="val" id="r-rad">--</div>
+              <div class="unit">km</div>
+              <div class="lbl">Radio de búsqueda</div>
+            </div>
+            <div class="card">
+              <div class="val" id="r-min">--</div>
+              <div class="unit">min</div>
+              <div class="lbl">Tiempo transcurrido</div>
+            </div>
+            <div class="card">
+              <div class="val" id="r-prob">--</div>
+              <div class="unit">%</div>
+              <div class="lbl">Confianza zona central</div>
+            </div>
+          </div>
+
+          <div style="margin-top:13px;">
+            <div class="sec-title" style="font-size:11px;margin-bottom:8px;">
+              <i class="fas fa-taxi" style="color:var(--yellow)"></i>
+              Paradas de taxi en el área de búsqueda
+            </div>
+            <div id="stands-list"></div>
+          </div>
+
+          <div style="margin-top:13px;">
+            <div class="sec-title" style="font-size:11px;margin-bottom:4px;">Leyenda</div>
+            <div class="legend-row"><div class="leg-dot" style="background:#27ae60"></div> Alta prob. (0–33% del radio)</div>
+            <div class="legend-row"><div class="leg-dot" style="background:#f39c12"></div> Media prob. (33–66%)</div>
+            <div class="legend-row"><div class="leg-dot" style="background:#e74c3c"></div> Baja prob. (66–100%)</div>
+            <div class="legend-row"><div class="leg-dot" style="background:#3498db"></div> Ruta confirmada A→B</div>
+            <div class="legend-row"><div class="leg-dot" style="background:#9b59b6;border:2px dashed #9b59b6;background:transparent"></div> Proyección estimada</div>
+          </div>
+        </div>
+
+      </div><!-- /pane-track -->
+
+      <!-- ══ TAB: CONTACTOS ══ -->
+      <div id="pane-contacts" class="tab-pane">
+        <div class="sec">
+          <div class="sec-title"><i class="fas fa-building" style="color:var(--red)"></i> Centrales de taxi Sevilla</div>
+
+          <div class="co-card">
+            <div class="co-name">🚕 Teletaxi Sevilla</div>
+            <div class="co-phone">954 62 22 22</div>
+            <div class="co-det">
+              <i class="fas fa-map-marker-alt"></i> C/ Recaredo, 2 · 41003 Sevilla<br>
+              <i class="fas fa-clock"></i> 24 h · Flota ~2.100 vehículos<br>
+              <i class="fas fa-globe"></i> teletaxisevilla.es
+            </div>
+            <button class="copy-btn" onclick="cp('954 62 22 22',this)"><i class="fas fa-copy"></i> Copiar teléfono</button>
+          </div>
+
+          <div class="co-card" style="border-left-color:var(--orange)">
+            <div class="co-name">🚖 Radio Taxi Sevilla</div>
+            <div class="co-phone">954 58 00 00</div>
+            <div class="co-det">
+              <i class="fas fa-map-marker-alt"></i> C/ Víctor de la Serna, 29 · 41005 Sevilla<br>
+              <i class="fas fa-clock"></i> 24 h · Flota ~800 vehículos
+            </div>
+            <button class="copy-btn" onclick="cp('954 58 00 00',this)"><i class="fas fa-copy"></i> Copiar teléfono</button>
+          </div>
+
+          <div class="co-card" style="border-left-color:var(--green)">
+            <div class="co-name">🚓 Taxi Nervión / FreeNow</div>
+            <div class="co-phone">954 67 55 55</div>
+            <div class="co-det">
+              <i class="fas fa-clock"></i> 24 h · También app FreeNow (Mytaxi)
+            </div>
+            <button class="copy-btn" onclick="cp('954 67 55 55',this)"><i class="fas fa-copy"></i> Copiar teléfono</button>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title"><i class="fas fa-shield-halved" style="color:var(--blue)"></i> Policía y objetos perdidos</div>
+          <div class="co-card" style="border-left-color:var(--blue)">
+            <div class="co-name">👮 Policía Local Sevilla</div>
+            <div class="co-phone">092</div>
+            <div class="co-det">Pueden solicitar registros de facturación a las centrales de taxi</div>
+          </div>
+          <div class="co-card" style="border-left-color:#9b59b6">
+            <div class="co-name">🏛️ Objetos Perdidos — Ayuntamiento</div>
+            <div class="co-phone">955 47 29 00</div>
+            <div class="co-det">
+              <i class="fas fa-map-marker-alt"></i> Av. de Málaga, 12 · 41007 Sevilla<br>
+              <i class="fas fa-clock"></i> L–V 9:00–14:00
+            </div>
+          </div>
+          <div class="co-card" style="border-left-color:#1abc9c">
+            <div class="co-name">🚍 EMT Sevilla (Tussam)</div>
+            <div class="co-phone">902 45 99 54</div>
+            <div class="co-det">Si el taxi pudo ser de empresa municipal</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title"><i class="fas fa-comment-dots" style="color:var(--orange)"></i> Guión para la llamada</div>
+          <div class="alert alert-warn">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span>Ten preparados: hora de recogida, dirección, descripción de la billetera y coordenadas del AirTag.</span>
+          </div>
+          <div class="script-box">
+            <b>"Buenos días/tardes, llamo porque he perdido mi billetera en un taxi de Sevilla.</b><br>
+            Subí aproximadamente a las <span class="highlight" id="s-time">[HORA]</span>
+            en <span class="highlight" id="s-addr">[DIRECCIÓN DE RECOGIDA]</span>.<br>
+            Tengo un localizador AirTag dentro de la billetera y la última señal recibida fue cerca de
+            <span class="highlight" id="s-airtag">[ZONA DEL AIRTAG]</span>
+            a las <span class="highlight" id="s-ping">[HORA DEL PING]</span>.<br>
+            Según mi análisis, el taxi podría encontrarse en un radio de
+            <span class="highlight" id="s-rad">[X]</span> km de esa posición.<br>
+            ¿Podrían revisar qué conductores estaban operando en esa zona y horario?
+            <b>Muchas gracias."</b>
+          </div>
+          <button class="btn btn-ghost" onclick="cpScript()"><i class="fas fa-copy"></i> Copiar guión</button>
+        </div>
+      </div><!-- /pane-contacts -->
+
+      <!-- ══ TAB: PINGS ══ -->
+      <div id="pane-pings" class="tab-pane">
+        <div class="sec">
+          <div class="sec-title"><i class="fas fa-broadcast-tower" style="color:var(--red)"></i> Historial de pings AirTag</div>
+          <div class="alert alert-info">
+            <i class="fas fa-circle-info"></i>
+            <span>Añade múltiples posiciones del AirTag para reconstruir el trayecto con mayor precisión.</span>
+          </div>
+
+          <label style="margin-top:10px;">Hora del ping:</label>
+          <input type="datetime-local" id="wp-time" />
+          <label>Dirección o coordenadas:</label>
+          <div class="row">
+            <input type="text" id="wp-addr" placeholder="Dirección o lat,lng" onkeydown="if(event.key==='Enter')addWP()" />
+            <button class="btn btn-ghost" onclick="addWP()" style="width:auto;margin:0;padding:7px 10px;"><i class="fas fa-plus"></i></button>
+          </div>
+          <button class="btn btn-ghost" onclick="modeSet('waypoint')"><i class="fas fa-map-pin"></i> Marcar ping en mapa</button>
+
+          <div id="ping-list" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="sec">
+          <div class="sec-title"><i class="fas fa-chart-line" style="color:var(--green)"></i> Análisis de trayectoria</div>
+          <div id="traj-info" style="font-size:12px;color:var(--txt2);">
+            Añade al menos 2 pings para ver el análisis de trayectoria.
+          </div>
+        </div>
+      </div><!-- /pane-pings -->
+
+      <!-- ══ TAB: INFORME ══ -->
+      <div id="pane-report" class="tab-pane">
+        <div class="sec">
+          <div class="sec-title"><i class="fas fa-file-alt" style="color:var(--red)"></i> Datos del informe</div>
+          <div class="alert alert-info">
+            <i class="fas fa-circle-info"></i>
+            <span>Rellena para generar un PDF imprimible para mostrar a policía o centrales de taxi.</span>
+          </div>
+
+          <label>Descripción de la billetera:</label>
+          <input type="text" id="rep-wallet" placeholder="Color, marca, contenido relevante..." />
+
+          <label>Hora aproximada de pérdida:</label>
+          <input type="text" id="rep-losstime" placeholder="Ej: 14:30 del 23/06/2026" />
+
+          <label>Dirección de recogida del taxi:</label>
+          <input type="text" id="rep-pickup" placeholder="Calle o plaza donde subiste" />
+
+          <label>Destino del viaje (dónde bajaste):</label>
+          <input type="text" id="rep-dest" placeholder="Destino final del trayecto" />
+
+          <label>Descripción del taxi (si recuerdas):</label>
+          <input type="text" id="rep-taxi" placeholder="Color, número de licencia, conductor..." />
+
+          <label>Número de denuncia / referencia:</label>
+          <input type="text" id="rep-ref" placeholder="Nº de caso policial si lo tienes" />
+
+          <label>Notas adicionales:</label>
+          <textarea id="rep-notes" placeholder="Cualquier detalle adicional que recuerdes..."></textarea>
+
+          <button class="btn btn-red" onclick="printReport()" style="margin-top:12px;">
+            <i class="fas fa-print"></i> Imprimir / Guardar PDF
+          </button>
+          <button class="btn btn-ghost" onclick="exportJSON()">
+            <i class="fas fa-download"></i> Exportar datos JSON
+          </button>
+        </div>
+      </div><!-- /pane-report -->
+
+    </div><!-- /sb-scroll -->
+  </div><!-- /sb -->
+
+  <!-- ══ MAP ══ -->
+  <div id="map"></div>
+
+</div><!-- /main -->
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════════
+const SEVILLA = [37.3891, -5.9845];
+
+const COMPANIES = [
+  { name:'Teletaxi Sevilla',      phone:'954 62 22 22', addr:'C/ Recaredo, 2',            lat:37.38765, lng:-5.99128, col:'#FFD700' },
+  { name:'Radio Taxi Sevilla',    phone:'954 58 00 00', addr:'C/ Víctor de la Serna, 29', lat:37.38110, lng:-5.97558, col:'#FF6B35' },
+  { name:'Taxi Nervión / FreeNow',phone:'954 67 55 55', addr:'Sevilla',                   lat:37.39055, lng:-5.96770, col:'#4ECDC4' },
+];
+
+const STANDS = [
+  { n:'Plaza Nueva',             lat:37.38921, lng:-5.99598, imp:5 },
+  { n:'Av. de la Constitución',  lat:37.38698, lng:-5.99233, imp:4 },
+  { n:'Plaza del Salvador',      lat:37.39124, lng:-5.99219, imp:4 },
+  { n:'Alameda de Hércules',     lat:37.39748, lng:-5.99403, imp:3 },
+  { n:'Puerta de Jerez',         lat:37.38312, lng:-5.99483, imp:4 },
+  { n:'Plaza de España',         lat:37.37726, lng:-5.98765, imp:4 },
+  { n:'Estación Santa Justa',    lat:37.39194, lng:-5.97574, imp:5 },
+  { n:'Plaza de Armas',          lat:37.39204, lng:-6.00024, imp:4 },
+  { n:'Triana – C/ Betis',       lat:37.38349, lng:-6.00195, imp:3 },
+  { n:'Los Remedios',            lat:37.37679, lng:-6.00158, imp:3 },
+  { n:'Macarena (Basílica)',      lat:37.40135, lng:-5.99659, imp:3 },
+  { n:'Nervión (C.C.)',           lat:37.38965, lng:-5.96769, imp:3 },
+  { n:'Hospital Virgen del Rocío',lat:37.36109, lng:-5.98936, imp:3 },
+  { n:'Aeropuerto San Pablo',    lat:37.41794, lng:-5.89315, imp:5 },
+  { n:'Palacio de Congresos',    lat:37.37428, lng:-5.98456, imp:3 },
+  { n:'Calle San Eloy',          lat:37.39012, lng:-5.99389, imp:3 },
+  { n:'San Bernardo',            lat:37.37981, lng:-5.98001, imp:3 },
+  { n:'Torre Sevilla (Triana)',  lat:37.38583, lng:-6.00556, imp:3 },
+  { n:'Paseo de las Delicias',   lat:37.37432, lng:-5.99623, imp:3 },
+  { n:'Puerta de la Carne',      lat:37.38634, lng:-5.98798, imp:2 },
+  { n:'Hospital Virgen Macarena',lat:37.41018, lng:-5.98891, imp:3 },
+  { n:'Av. de Kansas City',      lat:37.39412, lng:-5.97912, imp:3 },
+  { n:'Parque María Luisa',      lat:37.37215, lng:-5.98905, imp:2 },
+];
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let MODE        = null;
+let mPickup     = null;
+let mAirtag     = null;
+let speed       = 35;
+let layers      = [];
+let heatL       = null;
+let standMks    = [];
+let waypoints   = [];
+let wpMarkers   = [];
+let startTs     = Date.now();
+
+// ══════════════════════════════════════════════════════
+//  MAP INIT
+// ══════════════════════════════════════════════════════
+const map = L.map('map', { center: SEVILLA, zoom: 14, zoomControl: true });
+
+const tilesLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  { attribution:'© OpenStreetMap © CARTO', maxZoom:19 });
+
+const tilesDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  { attribution:'© OpenStreetMap © CARTO', maxZoom:19 });
+
+const tilesOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { attribution:'© OpenStreetMap contributors', maxZoom:19 });
+
+tilesLight.addTo(map);
+L.control.layers({ 'Claro (CARTO)':tilesLight, 'Oscuro (CARTO)':tilesDark, 'OpenStreetMap':tilesOSM }, {}, { position:'topright' }).addTo(map);
+L.control.scale({ imperial:false, metric:true, position:'bottomright' }).addTo(map);
+
+// Seville reference circle
+L.circle(SEVILLA, { radius:7500, color:'#3498db', fillColor:'transparent', weight:1, opacity:.18, dashArray:'8,8', interactive:false }).addTo(map);
+
+// ══════════════════════════════════════════════════════
+//  CUSTOM ICONS
+// ══════════════════════════════════════════════════════
+function pinIcon(emoji, color, sz=38) {
+  return L.divIcon({
+    html:`<div style="
+      background:${color};width:${sz}px;height:${sz}px;border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.45);
+      display:flex;align-items:center;justify-content:center;">
+      <span style="transform:rotate(45deg);font-size:${Math.round(sz*.44)}px;line-height:1;">${emoji}</span>
+    </div>`,
+    className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz], popupAnchor:[0,-sz]
+  });
+}
+
+function circIcon(emoji, color, sz=28) {
+  return L.divIcon({
+    html:`<div style="
+      background:${color};width:${sz}px;height:${sz}px;border-radius:50%;
+      border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);
+      display:flex;align-items:center;justify-content:center;font-size:${Math.round(sz*.45)}px;">
+      ${emoji}
+    </div>`,
+    className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], popupAnchor:[0,-sz/2]
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  COMPANY MARKERS
+// ══════════════════════════════════════════════════════
+COMPANIES.forEach(c => {
+  L.marker([c.lat, c.lng], { icon: pinIcon('🏢', c.col, 40) })
+    .addTo(map)
+    .bindPopup(`
+      <div style="min-width:190px;font-family:sans-serif;">
+        <b style="font-size:14px;">${c.name}</b><br>
+        <span style="font-size:22px;font-weight:800;color:#e74c3c;">${c.phone}</span><br>
+        <small style="color:#666;">${c.addr}</small><br>
+        <button onclick="navigator.clipboard.writeText('${c.phone}')"
+          style="margin-top:8px;padding:5px 12px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;">
+          📋 Copiar número
+        </button>
+      </div>
+    `);
+});
+
+// ══════════════════════════════════════════════════════
+//  TAXI STAND MARKERS
+// ══════════════════════════════════════════════════════
+STANDS.forEach(s => {
+  const mk = L.marker([s.lat, s.lng], { icon: circIcon('🚕','#FFD700',24), opacity:.8 })
+    .addTo(map)
+    .bindTooltip(s.n, { permanent:false, direction:'top', className:'taxi-tooltip' })
+    .bindPopup(`<b>🚕 Parada de taxi</b><br>${s.n}<br><small style="color:#888;">Importancia: ${'★'.repeat(s.imp)}</small>`);
+  standMks.push({ mk, s });
+});
+
+// ══════════════════════════════════════════════════════
+//  MAP CLICK
+// ══════════════════════════════════════════════════════
+map.on('click', e => {
+  const { lat, lng } = e.latlng;
+  if (MODE === 'pickup')   { placePickup(lat, lng);  modeSet(null); }
+  else if (MODE === 'airtag')  { placeAirtag(lat, lng);  modeSet(null); }
+  else if (MODE === 'waypoint') { captureWP(lat, lng); modeSet(null); }
+});
+
+// ══════════════════════════════════════════════════════
+//  PLACE MARKERS
+// ══════════════════════════════════════════════════════
+function placePickup(lat, lng) {
+  if (mPickup) map.removeLayer(mPickup);
+  mPickup = L.marker([lat,lng], { icon: pinIcon('🟢','#27ae60',42), draggable:true })
+    .addTo(map).bindPopup('<b>🟢 Punto de recogida</b><br>Aquí subiste al taxi');
+  mPickup.on('dragend', e => { const p=e.target.getLatLng(); placePickup(p.lat,p.lng); });
+  setCoordBox('pu-coord', lat, lng);
+  revGeo(lat, lng, 'pu-addr');
+  updateScript();
+}
+
+function placeAirtag(lat, lng) {
+  if (mAirtag) map.removeLayer(mAirtag);
+  mAirtag = L.marker([lat,lng], { icon: pinIcon('📡','#e74c3c',42), draggable:true })
+    .addTo(map).bindPopup('<b>📡 Última señal AirTag</b><br>Última posición conocida de la billetera');
+  mAirtag.on('dragend', e => { const p=e.target.getLatLng(); placeAirtag(p.lat,p.lng); });
+  setCoordBox('at-coord', lat, lng);
+  revGeo(lat, lng, 'at-addr');
+  refreshTimeSince();
+  updateScript();
+}
+
+function setCoordBox(id, lat, lng) {
+  const el = document.getElementById(id);
+  el.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  el.className = 'coord-box set';
+}
+
+// ══════════════════════════════════════════════════════
+//  MODE
+// ══════════════════════════════════════════════════════
+function modeSet(m) {
+  MODE = m;
+  const labels = { pickup:'🟢 Haz clic en el mapa: recogida', airtag:'📡 Haz clic en el mapa: AirTag', waypoint:'🔵 Haz clic para añadir ping', null:'Mapa listo' };
+  const shortLabels = { pickup:'Marcando recogida', airtag:'Marcando AirTag', waypoint:'Marcando ping', null:'Exploración' };
+  document.getElementById('status-msg').textContent = labels[m] || 'Mapa listo';
+  document.getElementById('mode-lbl').textContent = 'Modo: ' + (shortLabels[m] || 'Exploración');
+  map.getContainer().style.cursor = m ? 'crosshair' : '';
+}
+
+// ══════════════════════════════════════════════════════
+//  GEOCODING
+// ══════════════════════════════════════════════════════
+async function geo(addr) {
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr+', Sevilla, España')}&format=json&limit=1&countrycodes=es`);
+  const d = await r.json();
+  if (!d.length) { alert('Dirección no encontrada. Sé más específico.'); return null; }
+  return { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) };
+}
+
+async function geoPickup() {
+  const v = document.getElementById('pu-addr').value; if (!v) return;
+  const r = await geo(v); if (!r) return;
+  placePickup(r.lat, r.lon); map.setView([r.lat,r.lon], 16);
+}
+
+async function geoAirtag() {
+  const v = document.getElementById('at-addr').value; if (!v) return;
+  const r = await geo(v); if (!r) return;
+  placeAirtag(r.lat, r.lon); map.setView([r.lat,r.lon], 16);
+}
+
+async function revGeo(lat, lng, fieldId) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+    const d = await r.json();
+    if (d.display_name) {
+      const parts = d.display_name.split(',');
+      document.getElementById(fieldId).value = parts.slice(0,3).join(',').trim();
+      updateScript();
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════
+//  SPEED
+// ══════════════════════════════════════════════════════
+function spdChange(v) {
+  speed = +v;
+  document.getElementById('spd-val').textContent = v;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('on'));
+}
+
+function scenario(s, el) {
+  const map_ = { slow:20, normal:35, fast:55, hwy:80 };
+  speed = map_[s];
+  document.getElementById('spd-range').value = speed;
+  document.getElementById('spd-val').textContent = speed;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+}
+
+// ══════════════════════════════════════════════════════
+//  TIME SINCE
+// ══════════════════════════════════════════════════════
+function refreshTimeSince() {
+  const v = document.getElementById('ping-time').value;
+  const el = document.getElementById('time-since-box');
+  if (!v) { el.textContent = 'Introduce la hora del último ping'; return; }
+  const pingT = new Date(v);
+  const diff = Math.max(0, (Date.now() - pingT) / 60000);
+  const h = Math.floor(diff/60), m = Math.round(diff%60);
+  el.textContent = `⏱ Hace ${h>0?h+'h ':''} ${m} min · Ping a las ${pingT.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`;
+  el.className = 'coord-box set';
+  updateScript();
+}
+
+// Set default ping time = 25 min ago
+const def = new Date(Date.now() - 25*60000);
+document.getElementById('ping-time').value = def.toISOString().slice(0,16);
+document.getElementById('wp-time').value   = def.toISOString().slice(0,16);
+refreshTimeSince();
+
+// ══════════════════════════════════════════════════════
+//  ROUTE (OSRM)
+// ══════════════════════════════════════════════════════
+async function osrm(from, to) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+  const r = await fetch(url);
+  const d = await r.json();
+  if (d.code === 'Ok' && d.routes.length) {
+    return { dist: d.routes[0].distance, dur: d.routes[0].duration, geom: d.routes[0].geometry };
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════════════
+//  MAIN CALCULATE
+// ══════════════════════════════════════════════════════
+async function calculate() {
+  if (!mPickup || !mAirtag) { alert('Marca el punto de recogida y la última posición del AirTag.'); return; }
+
+  const btn = document.getElementById('calc-btn');
+  btn.innerHTML = '<div class="spin"></div> Calculando ruta...';
+  btn.disabled = true;
+
+  clearLayers();
+
+  const PU = mPickup.getLatLng();
+  const AT = mAirtag.getLatLng();
+  const pingT = new Date(document.getElementById('ping-time').value);
+  const elapsedMin = Math.max(0, (Date.now() - pingT) / 60000);
+  const radKm = (elapsedMin / 60) * speed;
+
+  let distKm = 0;
+  let routeGeom = null;
+
+  try {
+    const rd = await osrm(PU, AT);
+    if (rd) {
+      distKm  = rd.dist / 1000;
+      routeGeom = rd.geom;
+      drawRoute(rd.geom);
+      drawRouteExtension(rd.geom, radKm);
+    } else {
+      drawStraight(PU, AT);
+      distKm = map.distance(PU, AT) / 1000;
+    }
+  } catch(e) {
+    drawStraight(PU, AT);
+    distKm = map.distance(PU, AT) / 1000;
+  }
+
+  drawZones(AT, radKm);
+  drawHeat(AT, radKm);
+
+  // Waypoint trail
+  drawWaypointTrail();
+
+  const nearby = nearbyStands(AT, radKm);
+  showResults(distKm, radKm, elapsedMin, nearby);
+
+  // Fit bounds
+  const bounds = L.latLngBounds([[PU.lat,PU.lng],[AT.lat,AT.lng]]).pad(Math.min(radKm*0.012 + 0.05, 0.4));
+  map.fitBounds(bounds);
+
+  updateScript();
+
+  btn.innerHTML = '<i class="fas fa-route"></i> RECALCULAR';
+  btn.disabled = false;
+}
+
+// ══════════════════════════════════════════════════════
+//  DRAW HELPERS
+// ══════════════════════════════════════════════════════
+function track(l) { layers.push(l); return l; }
+
+function drawRoute(geom) {
+  const coords = geom.coordinates.map(c => [c[1],c[0]]);
+  track(L.polyline(coords, { color:'#000', weight:8, opacity:.2, interactive:false }).addTo(map));
+  track(L.polyline(coords, { color:'#3498db', weight:5, opacity:.92, interactive:false }).addTo(map));
+  track(L.polyline(coords, { color:'#87ceeb', weight:2, opacity:.6, dashArray:'10,18', interactive:false }).addTo(map));
+}
+
+function drawStraight(a, b) {
+  track(L.polyline([[a.lat,a.lng],[b.lat,b.lng]], { color:'#3498db', weight:4, opacity:.7, dashArray:'10,8' }).addTo(map));
+}
+
+function drawRouteExtension(geom, radKm) {
+  const coords = geom.coordinates;
+  if (coords.length < 2) return;
+
+  const last = coords[coords.length - 1];
+  const prev = coords[Math.max(0, coords.length - Math.min(8, coords.length-1))];
+
+  const dx = last[0] - prev[0];
+  const dy = last[1] - prev[1];
+  const d  = Math.sqrt(dx*dx + dy*dy);
+  if (d < 1e-8) return;
+
+  const nx = dx/d, ny = dy/d;
+  const deg = 1/111; // 1 km ≈ 1/111 deg lat
+  const pts = [];
+
+  for (let i=1; i<=8; i++) {
+    const frac = (i/8) * radKm;
+    pts.push([ last[1] + ny*frac*deg, last[0] + nx*frac*deg ]);
+  }
+
+  const ext = track(L.polyline([[last[1],last[0]], ...pts], {
+    color:'#9b59b6', weight:3, opacity:.7, dashArray:'8,7'
+  }).addTo(map));
+  ext.bindTooltip('📍 Dirección proyectada del taxi', { direction:'right' });
+
+  // Arrow at tip
+  const tip = pts[pts.length-1];
+  track(L.circleMarker(tip, { radius:6, color:'#9b59b6', fillColor:'#9b59b6', fillOpacity:.8, weight:2 }).addTo(map));
+}
+
+function drawZones(center, radKm) {
+  const { lat, lng } = center;
+  const zones = [
+    { r:1.00, col:'#e74c3c', fo:.07, stroke:.55 },
+    { r:0.66, col:'#f39c12', fo:.11, stroke:.55 },
+    { r:0.33, col:'#27ae60', fo:.18, stroke:.7  },
+  ];
+  zones.forEach(z => {
+    track(L.circle([lat,lng], {
+      radius: z.r * radKm * 1000,
+      color: z.col, fillColor: z.col, fillOpacity: z.fo,
+      weight: 1.5, opacity: z.stroke, dashArray: z.r===1 ? '6,5' : null
+    }).addTo(map)
+    .bindPopup(`Radio ${Math.round(z.r*100)}% · ${(z.r*radKm).toFixed(2)} km`));
+  });
+  // Center dot
+  track(L.circleMarker([lat,lng], { radius:5, color:'#e74c3c', fillColor:'#e74c3c', fillOpacity:1, weight:0 }).addTo(map));
+}
+
+function drawHeat(center, radKm) {
+  if (heatL) { map.removeLayer(heatL); heatL = null; }
+  const pts = [];
+  const R = radKm * 1000;
+  const cosLat = Math.cos(center.lat * Math.PI / 180);
+
+  for (let i=0; i<300; i++) {
+    const r = Math.sqrt(Math.random()) * R;
+    const θ = Math.random() * 2 * Math.PI;
+    const lat = center.lat + (r * Math.sin(θ)) / 111111;
+    const lng = center.lng + (r * Math.cos(θ)) / (111111 * cosLat);
+    pts.push([lat, lng, Math.max(0, 1 - r/R)]);
+  }
+  for (let i=0; i<120; i++) {
+    const r = Math.sqrt(Math.random()) * R * .3;
+    const θ = Math.random() * 2 * Math.PI;
+    pts.push([center.lat + (r*Math.sin(θ))/111111, center.lng + (r*Math.cos(θ))/(111111*cosLat), .9]);
+  }
+
+  heatL = L.heatLayer(pts, {
+    radius:35, blur:28, maxZoom:17,
+    gradient:{ 0:'transparent', .25:'#27ae60', .55:'#f39c12', .8:'#e74c3c', 1:'#c0392b' }
+  }).addTo(map);
+}
+
+function drawWaypointTrail() {
+  if (waypoints.length < 2) return;
+  const coords = waypoints.map(w => [w.lat, w.lng]);
+  track(L.polyline(coords, { color:'#1abc9c', weight:3, opacity:.8, dashArray:'5,6' }).addTo(map)
+    .bindTooltip('Trayectoria reconstruida por pings'));
+}
+
+// ══════════════════════════════════════════════════════
+//  NEAREST STANDS
+// ══════════════════════════════════════════════════════
+function nearbyStands(center, radKm) {
+  const withDist = STANDS.map(s => ({
+    ...s,
+    dist: map.distance(center, L.latLng(s.lat, s.lng)) / 1000
+  })).sort((a,b) => a.dist - b.dist);
+
+  standMks.forEach(({mk, s}) => {
+    const d = map.distance(center, L.latLng(s.lat, s.lng)) / 1000;
+    const inR = d <= radKm * 1.1;
+    mk.setOpacity(inR ? 1 : .35);
+    mk.setIcon(circIcon('🚕', inR ? '#FFD700' : '#666', inR ? 30 : 22));
+  });
+
+  return withDist;
+}
+
+// ══════════════════════════════════════════════════════
+//  SHOW RESULTS
+// ══════════════════════════════════════════════════════
+function showResults(distKm, radKm, elapsedMin, stands) {
+  document.getElementById('results').style.display = 'block';
+
+  const h = Math.floor(elapsedMin/60), m = Math.round(elapsedMin%60);
+  document.getElementById('r-dist').textContent = distKm.toFixed(2);
+  document.getElementById('r-rad').textContent  = radKm.toFixed(2);
+  document.getElementById('r-min').textContent  = h>0 ? `${h}h${m}` : Math.round(elapsedMin);
+  document.getElementById('r-prob').textContent = Math.max(10, Math.min(95, Math.round(85 - radKm*2.5)));
+
+  const el = document.getElementById('stands-list');
+  el.innerHTML = '';
+  stands.slice(0,8).forEach((s,i) => {
+    const inR = s.dist <= radKm;
+    const prob = Math.max(5, Math.round(100 - (s.dist / Math.max(radKm*1.5,0.1)) * 65));
+    const col = prob > 55 ? '#27ae60' : prob > 30 ? '#f39c12' : '#e74c3c';
+    const div = document.createElement('div');
+    div.className = 'stand';
+    div.innerHTML = `
+      <div class="stand-num" style="background:${inR?'#FFD700':'#555'}">${i+1}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.n}</div>
+        <div style="font-size:10px;color:var(--txt2);">${s.dist.toFixed(2)} km · ${inR?'⚠️ DENTRO del área':'Fuera'} · imp: ${'★'.repeat(s.imp)}</div>
+        <div class="pbar"><div class="pfill" style="width:${prob}%;background:${col};"></div></div>
+      </div>
+      <div style="font-size:11px;color:${col};font-weight:700;flex-shrink:0;">${prob}%</div>
+    `;
+    div.onclick = () => { map.setView([s.lat,s.lng],17); };
+    el.appendChild(div);
+  });
+
+  document.getElementById('status-msg').textContent =
+    `✅ Ruta calculada · Radio: ${radKm.toFixed(1)} km · Tiempo: ${Math.round(elapsedMin)} min`;
+
+  document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ══════════════════════════════════════════════════════
+//  CLEAR
+// ══════════════════════════════════════════════════════
+function clearLayers() {
+  layers.forEach(l => map.removeLayer(l));
+  layers = [];
+  if (heatL) { map.removeLayer(heatL); heatL = null; }
+  standMks.forEach(({mk}) => { mk.setOpacity(.8); mk.setIcon(circIcon('🚕','#FFD700',24)); });
+}
+
+function resetAll() {
+  clearLayers();
+  if (mPickup) { map.removeLayer(mPickup); mPickup=null; }
+  if (mAirtag) { map.removeLayer(mAirtag); mAirtag=null; }
+  ['pu-coord','at-coord'].forEach(id => {
+    const el=document.getElementById(id);
+    el.textContent='Sin ubicación seleccionada'; el.className='coord-box';
+  });
+  document.getElementById('results').style.display='none';
+  document.getElementById('pu-addr').value='';
+  document.getElementById('at-addr').value='';
+  document.getElementById('status-msg').textContent='Reiniciado. Marca los puntos para comenzar.';
+  map.setView(SEVILLA, 14);
+}
+
+// ══════════════════════════════════════════════════════
+//  WAYPOINTS / MULTI-PING
+// ══════════════════════════════════════════════════════
+async function addWP() {
+  const addr  = document.getElementById('wp-addr').value.trim();
+  const tStr  = document.getElementById('wp-time').value;
+  if (!addr) { alert('Introduce una dirección o coordenadas.'); return; }
+
+  let lat, lng;
+  // Try lat,lng parse
+  const ll = addr.split(',').map(parseFloat);
+  if (ll.length===2 && !isNaN(ll[0]) && !isNaN(ll[1])) {
+    lat=ll[0]; lng=ll[1];
+  } else {
+    const r = await geo(addr);
+    if (!r) return;
+    lat=r.lat; lng=r.lon;
+  }
+
+  const t = tStr ? new Date(tStr) : new Date();
+  waypoints.push({ lat, lng, time:t, label:addr });
+  waypoints.sort((a,b) => a.time-b.time);
+
+  const mk = L.marker([lat,lng], { icon: circIcon('🔵','#3498db',28) })
+    .addTo(map)
+    .bindPopup(`<b>🔵 Ping AirTag</b><br>${addr}<br>${t.toLocaleTimeString('es-ES')}`);
+  wpMarkers.push(mk);
+
+  renderWPList();
+  analyzeTrajectory();
+
+  document.getElementById('wp-addr').value='';
+}
+
+function captureWP(lat, lng) {
+  const t = new Date(document.getElementById('wp-time').value || Date.now());
+  const label = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  waypoints.push({ lat, lng, time:t, label });
+  waypoints.sort((a,b) => a.time-b.time);
+
+  const mk = L.marker([lat,lng], { icon: circIcon('🔵','#3498db',28) })
+    .addTo(map).bindPopup(`<b>🔵 Ping AirTag</b><br>${label}<br>${t.toLocaleTimeString('es-ES')}`);
+  wpMarkers.push(mk);
+
+  renderWPList();
+  analyzeTrajectory();
+}
+
+function renderWPList() {
+  const el = document.getElementById('ping-list');
+  el.innerHTML = '';
+  waypoints.forEach((w,i) => {
+    const div = document.createElement('div');
+    div.className = 'wp-item';
+    div.innerHTML = `
+      <span style="color:var(--blue);font-weight:700;">${i+1}</span>
+      <div style="flex:1;font-size:11px;">
+        <div>${w.label}</div>
+        <div style="color:var(--txt2);">${w.time.toLocaleTimeString('es-ES')}</div>
+      </div>
+      <button class="wp-del" onclick="removeWP(${i})"><i class="fas fa-times"></i></button>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function removeWP(i) {
+  if (wpMarkers[i]) map.removeLayer(wpMarkers[i]);
+  wpMarkers.splice(i,1);
+  waypoints.splice(i,1);
+  renderWPList();
+  analyzeTrajectory();
+}
+
+function analyzeTrajectory() {
+  const el = document.getElementById('traj-info');
+  if (waypoints.length < 2) {
+    el.textContent='Añade al menos 2 pings para ver el análisis.'; return;
+  }
+  let totalDist=0, maxSpd=0;
+  const speeds=[];
+  for (let i=1; i<waypoints.length; i++) {
+    const d = map.distance([waypoints[i-1].lat,waypoints[i-1].lng],[waypoints[i].lat,waypoints[i].lng]);
+    const dt = (waypoints[i].time - waypoints[i-1].time) / 3600000;
+    if (dt > 0) { const v=(d/1000)/dt; speeds.push(v); maxSpd=Math.max(maxSpd,v); }
+    totalDist += d/1000;
+  }
+  const avgSpd = speeds.length ? speeds.reduce((a,b)=>a+b)/speeds.length : 0;
+  const timeSpan = (waypoints[waypoints.length-1].time - waypoints[0].time)/60000;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="card"><div class="val">${totalDist.toFixed(2)}</div><div class="unit">km</div><div class="lbl">Distancia total</div></div>
+      <div class="card"><div class="val">${Math.round(avgSpd)}</div><div class="unit">km/h</div><div class="lbl">Velocidad media</div></div>
+      <div class="card"><div class="val">${Math.round(maxSpd)}</div><div class="unit">km/h</div><div class="lbl">Velocidad máx.</div></div>
+      <div class="card"><div class="val">${Math.round(timeSpan)}</div><div class="unit">min</div><div class="lbl">Lapso total</div></div>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--orange);">
+      ${maxSpd>80?'⚠️ Velocidad alta detectada — posible uso de autopista (SE-30, A-4, A-49).':'✅ Velocidad compatible con circulación urbana.'}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+//  SCRIPT FIELDS
+// ══════════════════════════════════════════════════════
+function updateScript() {
+  const puAddr  = document.getElementById('pu-addr').value;
+  const atAddr  = document.getElementById('at-addr').value;
+  const pingStr = document.getElementById('ping-time').value;
+  const radStr  = document.getElementById('r-rad')?.textContent;
+
+  if (puAddr)  document.getElementById('s-addr').textContent  = puAddr;
+  if (atAddr)  document.getElementById('s-airtag').textContent = atAddr;
+  if (pingStr) {
+    const t = new Date(pingStr);
+    document.getElementById('s-ping').textContent = t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('s-time').textContent = t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  }
+  if (radStr && radStr!=='--') document.getElementById('s-rad').textContent = radStr + ' km';
+}
+
+// ══════════════════════════════════════════════════════
+//  COPY
+// ══════════════════════════════════════════════════════
+function cp(text, btn) {
+  navigator.clipboard.writeText(text);
+  const orig = btn.innerHTML;
+  btn.innerHTML = '✓ Copiado';
+  setTimeout(() => { btn.innerHTML = orig; }, 1600);
+}
+
+function cpScript() {
+  const el = document.querySelector('.script-box');
+  navigator.clipboard.writeText(el.innerText.replace(/\s+/g,' ').trim());
+  alert('Guión copiado al portapapeles.');
+}
+
+// ══════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════
+function tab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  document.getElementById('pane-' + name).classList.add('on');
+  btn.classList.add('on');
+}
+
+// ══════════════════════════════════════════════════════
+//  REPORT
+// ══════════════════════════════════════════════════════
+function printReport() {
+  const PU  = mPickup ? mPickup.getLatLng() : null;
+  const AT  = mAirtag ? mAirtag.getLatLng() : null;
+  const now = new Date();
+
+  const v = id => document.getElementById(id).value || '–';
+  const rv = id => { const e=document.getElementById(id); return e ? e.textContent : '–'; };
+
+  const pingT = document.getElementById('ping-time').value;
+  const pingStr = pingT ? new Date(pingT).toLocaleString('es-ES') : '–';
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Informe pérdida en taxi – ${now.toLocaleDateString('es-ES')}</title>
+<style>
+  body{font-family:Arial,sans-serif;max-width:800px;margin:30px auto;padding:20px;color:#333;font-size:14px;}
+  h1{color:#e74c3c;border-bottom:3px solid #e74c3c;padding-bottom:8px;margin-bottom:20px;}
+  h2{color:#1e3a5f;margin:20px 0 10px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;}
+  .card{border:1px solid #ddd;border-radius:6px;padding:10px;}
+  .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;}
+  .val{font-size:15px;font-weight:600;margin-top:3px;}
+  .box{background:#fef9e7;border:1px solid #f39c12;border-radius:6px;padding:14px;margin:12px 0;}
+  .contacts{background:#eaf4ff;border:1px solid #3498db;border-radius:6px;padding:14px;margin:10px 0;line-height:2;}
+  .coords{font-family:monospace;font-size:12px;background:#f4f4f4;padding:4px 8px;border-radius:4px;}
+  @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+</style></head><body>
+<h1>🔍 INFORME DE OBJETO PERDIDO EN TAXI — SEVILLA</h1>
+<p><b>Fecha/hora del informe:</b> ${now.toLocaleString('es-ES')}</p>
+
+<div class="box">
+  <b>⚠️ OBJETO PERDIDO:</b> ${v('rep-wallet')}<br>
+  <b>Hora de pérdida aprox.:</b> ${v('rep-losstime')} &nbsp;|&nbsp; <b>Ref./Denuncia:</b> ${v('rep-ref')}
+</div>
+
+<h2>🚕 Datos del trayecto</h2>
+<div class="grid">
+  <div class="card"><div class="lbl">Punto de recogida</div><div class="val">${v('rep-pickup')}</div></div>
+  <div class="card"><div class="lbl">Destino del viaje</div><div class="val">${v('rep-dest')}</div></div>
+  <div class="card"><div class="lbl">Descripción del taxi</div><div class="val">${v('rep-taxi')}</div></div>
+  <div class="card"><div class="lbl">Coordenadas recogida</div><div class="val coords">${PU?`${PU.lat.toFixed(5)}, ${PU.lng.toFixed(5)}`:'–'}</div></div>
+</div>
+
+<h2>📡 Datos del localizador AirTag</h2>
+<div class="grid">
+  <div class="card"><div class="lbl">Hora del último ping</div><div class="val">${pingStr}</div></div>
+  <div class="card"><div class="lbl">Coordenadas último ping</div><div class="val coords">${AT?`${AT.lat.toFixed(5)}, ${AT.lng.toFixed(5)}`:'–'}</div></div>
+  <div class="card"><div class="lbl">Radio de búsqueda calculado</div><div class="val">${rv('r-rad')} km</div></div>
+  <div class="card"><div class="lbl">Tiempo transcurrido</div><div class="val">${rv('r-min')} min</div></div>
+</div>
+
+<h2>📝 Notas adicionales</h2>
+<p>${v('rep-notes')}</p>
+
+<h2>📞 Contactos de taxi — llamar inmediatamente</h2>
+<div class="contacts">
+  📞 <b>Teletaxi Sevilla:</b> 954 62 22 22 · C/ Recaredo, 2<br>
+  📞 <b>Radio Taxi Sevilla:</b> 954 58 00 00 · C/ Víctor de la Serna, 29<br>
+  👮 <b>Policía Local:</b> 092 &nbsp;|&nbsp; 🏛️ <b>Objetos Perdidos Ayuntamiento:</b> 955 47 29 00
+</div>
+
+<p style="margin-top:30px;font-size:11px;color:#aaa;">
+  Informe generado por el sistema de rastreo de billetera-taxi Sevilla · ${now.toLocaleString('es-ES')}
+</p>
+</body></html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  win.print();
+}
+
+function exportJSON() {
+  const PU = mPickup ? mPickup.getLatLng() : null;
+  const AT = mAirtag ? mAirtag.getLatLng() : null;
+  const data = {
+    generated: new Date().toISOString(),
+    pickup: PU ? { lat:PU.lat, lng:PU.lng } : null,
+    airtag: AT ? { lat:AT.lat, lng:AT.lng } : null,
+    pingTime: document.getElementById('ping-time').value,
+    speedKmh: speed,
+    searchRadiusKm: document.getElementById('r-rad').textContent,
+    elapsedMin: document.getElementById('r-min').textContent,
+    waypoints: waypoints.map(w=>({ lat:w.lat, lng:w.lng, time:w.time.toISOString(), label:w.label }))
+  };
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download=`rastreo_taxi_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+// ══════════════════════════════════════════════════════
+//  TIMER
+// ══════════════════════════════════════════════════════
+setInterval(() => {
+  const s = Math.floor((Date.now()-startTs)/1000);
+  document.getElementById('timer').textContent =
+    String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}, 1000);
+
+</script>
+</body>
+</html>
