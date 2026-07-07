@@ -27,11 +27,14 @@ nucleo-beatmaker/
 │   │   ├── context.js        (AudioContext + cadena master)
 │   │   ├── drumSynths.js      (kick, snare, hihat, clap, tom)
 │   │   ├── synthEngine.js      (osciladores para melodía/bajo)
+│   │   ├── theory.js           (escalas y acordes diatónicos)
+│   │   ├── playback.js         (dispara los sonidos de un paso)
 │   │   ├── effects.js          (reverb, delay, filtro)
 │   │   └── scheduler.js        (motor de tiempo/secuenciador)
 │   ├── ui/
 │   │   ├── drumRack.js
 │   │   ├── synthRack.js
+│   │   ├── keyPanel.js
 │   │   ├── transport.js
 │   │   └── mixer.js
 │   ├── state.js                (modelo de datos del proyecto)
@@ -67,8 +70,15 @@ Proyecto completo y funcional. Detalles de cada módulo:
 - **Melodía y bajo**: piano roll cromático (C4-C5 y C2-C3), selector de
   forma de onda por pista (seno/triángulo/cuadrada/sierra), clic en la nota
   para escucharla suelta.
-- **Mezclador**: fader de volumen y pan, mute y solo por las 8 pistas
-  (batería + melodía + bajo), con la lógica de solo compartida.
+- **Tonalidad y acordes**: elegís una tónica y una escala (mayor/menor). Con
+  el "bloqueo de escala" activo (por defecto), el piano roll de melodía y
+  bajo solo muestra las notas de esa tonalidad, y la pista de **Acordes**
+  ofrece sus 7 tríadas diatónicas (I, ii, iii...) listas para programar —
+  un acorde por paso. Todo lo que compongas encaja armónicamente por
+  construcción. Podés desactivar el bloqueo si preferís libertad cromática
+  total.
+- **Mezclador**: fader de volumen y pan, mute y solo por las 9 pistas
+  (batería + melodía + bajo + acordes), con la lógica de solo compartida.
 - **Master**: volumen general, mezcla de reverb (impulso sintético),
   mezcla de delay (con feedback) y filtro de brillo (lowpass).
 - **Proyecto**: guardar/cargar/eliminar con nombre en `localStorage`, botón

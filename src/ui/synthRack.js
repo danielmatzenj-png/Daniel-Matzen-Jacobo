@@ -1,8 +1,14 @@
 import { WAVEFORMS } from '../audio/synthEngine.js';
 
-// Piano roll simplificado: filas = notas (agudo arriba, grave abajo), columnas
-// = pasos del secuenciador. Un clic activa/desactiva una nota en ese paso.
-export function renderSynthRack(container, track, state, handlers) {
+// Piano roll simplificado y genérico: filas = `rows` (notas o, en el caso de
+// la pista de Acordes, tríadas diatónicas), columnas = pasos del
+// secuenciador. Un clic activa/desactiva una celda en `track.grid`, con la
+// clave `${row.key}_${step}`.
+//
+// `handlers.singleActivePerColumn` (usado por la pista de Acordes): al
+// activar una celda, se desactivan las demás filas de esa misma columna —
+// solo puede sonar un acorde por paso.
+export function renderSynthRack(container, track, rows, state, handlers) {
   container.innerHTML = '';
 
   const wrapper = document.createElement('div');
@@ -33,36 +39,59 @@ export function renderSynthRack(container, track, state, handlers) {
 
   wrapper.appendChild(header);
 
-  for (const noteName of track.notes) {
-    const row = document.createElement('div');
-    row.className = 'rack-row';
+  // cellMatrix[rowIndex][step] = { cell, gridKey } — se usa para poder
+  // limpiar de golpe las demás filas de una columna cuando
+  // singleActivePerColumn está activo, sin tener que re-renderizar todo.
+  const cellMatrix = [];
 
-    const noteBtn = document.createElement('button');
-    noteBtn.type = 'button';
-    noteBtn.className = 'track-trigger note-label';
-    noteBtn.textContent = noteName;
-    noteBtn.addEventListener('click', () => handlers.onPreviewNote(track.id, noteName));
-    row.appendChild(noteBtn);
+  rows.forEach((row, rowIndex) => {
+    const rackRow = document.createElement('div');
+    rackRow.className = 'rack-row';
+
+    const rowBtn = document.createElement('button');
+    rowBtn.type = 'button';
+    rowBtn.className = 'track-trigger row-label';
+    rowBtn.textContent = row.label;
+    rowBtn.addEventListener('click', () => handlers.onPreviewRow(row.key));
+    rackRow.appendChild(rowBtn);
 
     const cells = document.createElement('div');
     cells.className = 'step-cells';
+    const rowCells = [];
+
     for (let i = 0; i < state.stepCount; i++) {
-      const key = `${noteName}_${i}`;
+      const gridKey = `${row.key}_${i}`;
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = 'step-cell';
       cell.dataset.step = String(i);
       if (i % 4 === 0) cell.classList.add('beat-start');
-      if (track.grid[key]) cell.classList.add('active');
+      if (track.grid[gridKey]) cell.classList.add('active');
+
       cell.addEventListener('click', () => {
-        track.grid[key] = !track.grid[key];
-        cell.classList.toggle('active', track.grid[key]);
+        const turningOn = !track.grid[gridKey];
+
+        if (turningOn && handlers.singleActivePerColumn) {
+          for (let r = 0; r < cellMatrix.length; r++) {
+            if (r === rowIndex) continue;
+            const other = cellMatrix[r][i];
+            track.grid[other.gridKey] = false;
+            other.cell.classList.remove('active');
+          }
+        }
+
+        track.grid[gridKey] = turningOn;
+        cell.classList.toggle('active', turningOn);
       });
+
+      rowCells.push({ cell, gridKey });
       cells.appendChild(cell);
     }
-    row.appendChild(cells);
-    wrapper.appendChild(row);
-  }
+
+    cellMatrix.push(rowCells);
+    rackRow.appendChild(cells);
+    wrapper.appendChild(rackRow);
+  });
 
   container.appendChild(wrapper);
 

@@ -5,14 +5,30 @@ import { DRUM_PLAYERS } from './audio/drumSynths.js';
 import { playSynthNote } from './audio/synthEngine.js';
 import { scheduleStepSounds } from './audio/playback.js';
 import { Scheduler } from './audio/scheduler.js';
+import { isNoteInScale, getDiatonicChordDegrees } from './audio/theory.js';
 import { renderTransport, setupKeyboardShortcuts } from './ui/transport.js';
 import { renderDrumRack } from './ui/drumRack.js';
 import { renderSynthRack } from './ui/synthRack.js';
 import { renderMixer } from './ui/mixer.js';
+import { renderKeyPanel } from './ui/keyPanel.js';
 import { saveProject, loadProject, listProjects, deleteProject } from './storage.js';
 import { exportToWav } from './wavExport.js';
 
 const state = createInitialState();
+
+// Referencias directas a las pistas de synth, para no tener que buscarlas
+// cada vez. `replaceState` (carga de proyecto / "Nuevo") reemplaza
+// `state.synthTracks` por un array nuevo, así que estas variables se
+// vuelven a sincronizar ahí mismo con `syncTrackRefs()`.
+let melodyTrack;
+let bassTrack;
+let chordsTrack;
+function syncTrackRefs() {
+  melodyTrack = state.synthTracks.find((t) => t.id === 'melody');
+  bassTrack = state.synthTracks.find((t) => t.id === 'bass');
+  chordsTrack = state.synthTracks.find((t) => t.id === 'chords');
+}
+syncTrackRefs();
 
 document.querySelector('#app').innerHTML = `
   <header class="topbar">
@@ -20,6 +36,10 @@ document.querySelector('#app').innerHTML = `
     <div id="transport"></div>
   </header>
   <main class="layout">
+    <section class="panel">
+      <h2>Tonalidad</h2>
+      <div id="key-panel"></div>
+    </section>
     <section class="panel">
       <h2>Batería</h2>
       <div id="drum-rack"></div>
@@ -31,6 +51,10 @@ document.querySelector('#app').innerHTML = `
     <section class="panel">
       <h2>Bajo</h2>
       <div id="synth-rack-bass"></div>
+    </section>
+    <section class="panel">
+      <h2>Acordes</h2>
+      <div id="synth-rack-chords"></div>
     </section>
     <section class="panel">
       <h2>Mezclador</h2>
@@ -65,7 +89,9 @@ const transportContainer = document.querySelector('#transport');
 const drumContainer = document.querySelector('#drum-rack');
 const melodyContainer = document.querySelector('#synth-rack-melody');
 const bassContainer = document.querySelector('#synth-rack-bass');
+const chordsContainer = document.querySelector('#synth-rack-chords');
 const mixerContainer = document.querySelector('#mixer');
+const keyPanelContainer = document.querySelector('#key-panel');
 
 // Un canal (GainNode volumen + StereoPannerNode pan) por cada pista,
 // conectado a la cadena master. Se crea una sola vez; solo se actualizan sus
@@ -88,10 +114,44 @@ function syncAudioFromState() {
   }
 }
 
+// Filas visibles del piano roll de una pista de notas (melodía/bajo): con el
+// bloqueo de escala activo, solo las notas de la tonalidad elegida.
+function computeNoteRows(track) {
+  const notes = state.scaleLock
+    ? track.notes.filter((n) => isNoteInScale(n, state.key.root, state.key.scale))
+    : track.notes;
+  return notes.map((n) => ({ key: n, label: n }));
+}
+
+// Filas de la pista de Acordes: las 7 tríadas diatónicas de la tonalidad
+// actual (cambian de contenido si cambiás la tónica/escala, pero el patrón
+// programado por grado se mantiene).
+function computeChordRows() {
+  return getDiatonicChordDegrees(state.key.root, state.key.scale).map((chord, index) => ({
+    key: String(index),
+    label: `${chord.roman} ${chord.symbol}`,
+  }));
+}
+
+// Al cambiar de tonalidad o desactivar el bloqueo, se puede haber ocultado
+// alguna nota que ya estaba programada en melodía/bajo. La borramos del
+// estado (no solo de la vista) para que no quede una nota fantasma sonando
+// si se vuelve a activar el bloqueo más adelante.
+function pruneOutOfScaleNotes() {
+  for (const track of [melodyTrack, bassTrack]) {
+    const validKeys = new Set(computeNoteRows(track).map((row) => row.key));
+    for (const gridKey of Object.keys(track.grid)) {
+      const noteName = gridKey.split('_')[0];
+      if (!validKeys.has(noteName)) delete track.grid[gridKey];
+    }
+  }
+}
+
 let transportHandle;
 let drumRackHandle;
 let melodyHandle;
 let bassHandle;
+let chordsHandle;
 
 const transportHandlers = {
   onTogglePlay: () => {
@@ -113,13 +173,20 @@ const drumHandlers = {
   },
 };
 
-const synthHandlers = {
-  onPreviewNote: (trackId, noteName) => {
-    const ctx = getAudioContext();
-    const track = findTrack(state, trackId);
-    playSynthNote(ctx, channels.get(trackId).input, noteName, ctx.currentTime, 0.35, track.waveform);
-  },
-};
+function previewNote(trackId, noteName) {
+  const ctx = getAudioContext();
+  const track = findTrack(state, trackId);
+  playSynthNote(ctx, channels.get(trackId).input, noteName, ctx.currentTime, 0.35, track.waveform);
+}
+
+function previewChord(trackId, degreeIndexStr) {
+  const ctx = getAudioContext();
+  const track = findTrack(state, trackId);
+  const chord = getDiatonicChordDegrees(state.key.root, state.key.scale)[Number(degreeIndexStr)];
+  for (const noteName of chord.noteNames) {
+    playSynthNote(ctx, channels.get(trackId).input, noteName, ctx.currentTime, 0.5, track.waveform);
+  }
+}
 
 const mixerHandlers = {
   onVolPanChange: (trackId) => {
@@ -135,11 +202,29 @@ const mixerHandlers = {
   },
 };
 
+const keyPanelHandlers = {
+  onKeyChange: () => {
+    pruneOutOfScaleNotes();
+    rerenderAll();
+  },
+};
+
 function rerenderAll() {
+  renderKeyPanel(keyPanelContainer, state, keyPanelHandlers);
   transportHandle = renderTransport(transportContainer, state, transportHandlers);
   drumRackHandle = renderDrumRack(drumContainer, state, drumHandlers);
-  melodyHandle = renderSynthRack(melodyContainer, state.synthTracks[0], state, synthHandlers);
-  bassHandle = renderSynthRack(bassContainer, state.synthTracks[1], state, synthHandlers);
+  melodyHandle = renderSynthRack(melodyContainer, melodyTrack, computeNoteRows(melodyTrack), state, {
+    singleActivePerColumn: false,
+    onPreviewRow: (rowKey) => previewNote(melodyTrack.id, rowKey),
+  });
+  bassHandle = renderSynthRack(bassContainer, bassTrack, computeNoteRows(bassTrack), state, {
+    singleActivePerColumn: false,
+    onPreviewRow: (rowKey) => previewNote(bassTrack.id, rowKey),
+  });
+  chordsHandle = renderSynthRack(chordsContainer, chordsTrack, computeChordRows(), state, {
+    singleActivePerColumn: true,
+    onPreviewRow: (rowKey) => previewChord(chordsTrack.id, rowKey),
+  });
   renderMixer(mixerContainer, state, mixerHandlers);
 }
 
@@ -150,6 +235,7 @@ const scheduler = new Scheduler({
     drumRackHandle.setPlayhead(stepIndex);
     melodyHandle.setPlayhead(stepIndex);
     bassHandle.setPlayhead(stepIndex);
+    chordsHandle.setPlayhead(stepIndex);
   },
 });
 
@@ -182,12 +268,31 @@ function refreshProjectList() {
 }
 refreshProjectList();
 
+// Los proyectos guardados antes de agregar la pista de Acordes no la tienen
+// todavía (ni el campo `key`/`scaleLock`); se completan con los valores por
+// defecto para que cargarlos no rompa nada.
+function migrateLoadedState(loaded) {
+  if (!loaded.key) loaded.key = { root: 'C', scale: 'major' };
+  if (loaded.scaleLock === undefined) loaded.scaleLock = true;
+  if (!loaded.synthTracks.some((t) => t.id === 'chords')) {
+    loaded.synthTracks.push(createInitialState().synthTracks.find((t) => t.id === 'chords'));
+  }
+  for (const track of loaded.synthTracks) {
+    if (!track.type) track.type = track.id === 'chords' ? 'chords' : 'notes';
+  }
+  return loaded;
+}
+
 function replaceState(newState) {
+  migrateLoadedState(newState);
   state.bpm = newState.bpm;
   state.stepCount = newState.stepCount;
   state.drumTracks = newState.drumTracks;
   state.synthTracks = newState.synthTracks;
   state.master = newState.master;
+  state.key = newState.key;
+  state.scaleLock = newState.scaleLock;
+  syncTrackRefs();
   syncAudioFromState();
   rerenderAll();
 }

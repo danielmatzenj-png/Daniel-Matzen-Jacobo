@@ -28,6 +28,7 @@ export function createInitialState() {
       {
         id: 'melody',
         label: 'Melodía',
+        type: 'notes',
         waveform: 'sawtooth',
         notes: MELODY_NOTES,
         grid: {},
@@ -39,10 +40,22 @@ export function createInitialState() {
       {
         id: 'bass',
         label: 'Bajo',
+        type: 'notes',
         waveform: 'square',
         notes: BASS_NOTES,
         grid: {},
         vol: 0.7,
+        pan: 0,
+        mute: false,
+        solo: false,
+      },
+      {
+        id: 'chords',
+        label: 'Acordes',
+        type: 'chords',
+        waveform: 'sawtooth',
+        grid: {},
+        vol: 0.5,
         pan: 0,
         mute: false,
         solo: false,
@@ -54,6 +67,12 @@ export function createInitialState() {
       delayMix: 0.15,
       filterCutoff: 1.0,
     },
+    // Tonalidad: cuando scaleLock está activo, el piano roll de melodía y
+    // bajo solo permite notas de esta escala, y la pista de Acordes usa las
+    // 7 tríadas diatónicas de esta tonalidad — así todo lo que se programe
+    // encaja armónicamente por construcción.
+    key: { root: 'C', scale: 'major' },
+    scaleLock: true,
   };
 }
 
