@@ -48,16 +48,33 @@ Cada fase funciona y se puede probar antes de pasar a la siguiente.
 
 - [x] **Fase 0** — Preparación del entorno (Vite + vanilla JS).
 - [x] **Fase 1** — Un solo sonido: botón que reproduce un kick sintetizado.
-- [ ] **Fase 2** — Todos los sonidos de batería (snare, hi-hats, clap, tom).
-- [ ] **Fase 3** — Secuenciador básico de 16 pasos (una pista) con scheduler
+- [x] **Fase 2** — Todos los sonidos de batería (snare, hi-hats, clap, tom).
+- [x] **Fase 3** — Secuenciador básico de 16 pasos (una pista) con scheduler
       de lookahead, BPM y play/stop.
-- [ ] **Fase 4** — Todas las pistas de batería + playhead visual.
-- [ ] **Fase 5** — Synths melódicos (piano roll para melodía y bajo).
-- [ ] **Fase 6** — Mezclador: volumen, pan, mute, solo.
-- [ ] **Fase 7** — Efectos: reverb, delay, filtro de brillo (master).
-- [ ] **Fase 8** — Guardado y carga de proyectos (localStorage).
-- [ ] **Fase 9** — Exportación a WAV (OfflineAudioContext).
-- [ ] **Fase 10** — Pulido: diseño, responsividad, atajos de teclado.
+- [x] **Fase 4** — Todas las pistas de batería + playhead visual.
+- [x] **Fase 5** — Synths melódicos (piano roll para melodía y bajo).
+- [x] **Fase 6** — Mezclador: volumen, pan, mute, solo.
+- [x] **Fase 7** — Efectos: reverb, delay, filtro de brillo (master).
+- [x] **Fase 8** — Guardado y carga de proyectos (localStorage).
+- [x] **Fase 9** — Exportación a WAV (OfflineAudioContext).
+- [x] **Fase 10** — Pulido: diseño, responsividad, atajo de teclado (espacio
+      = play/stop).
+
+Proyecto completo y funcional. Detalles de cada módulo:
+
+- **Batería**: 16 pasos × 6 pistas (kick, snare, hi-hat cerrado/abierto,
+  clap, tom), cada una con botón de disparo manual además del patrón.
+- **Melodía y bajo**: piano roll cromático (C4-C5 y C2-C3), selector de
+  forma de onda por pista (seno/triángulo/cuadrada/sierra), clic en la nota
+  para escucharla suelta.
+- **Mezclador**: fader de volumen y pan, mute y solo por las 8 pistas
+  (batería + melodía + bajo), con la lógica de solo compartida.
+- **Master**: volumen general, mezcla de reverb (impulso sintético),
+  mezcla de delay (con feedback) y filtro de brillo (lowpass).
+- **Proyecto**: guardar/cargar/eliminar con nombre en `localStorage`, botón
+  "Nuevo" para resetear.
+- **Exportar**: genera un `.wav` (1, 4 u 8 compases) reconstruyendo toda la
+  cadena de audio en un `OfflineAudioContext`.
 
 ## Conceptos de Web Audio API usados
 
