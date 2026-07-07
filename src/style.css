@@ -99,6 +99,145 @@ h3 {
   color: var(--text-dim);
 }
 
+/* --- Pestañas Simple / Avanzado --- */
+.mode-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.mode-tab {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+}
+
+.mode-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* --- Modo simple: asistente guiado --- */
+.simple-view {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0 3rem;
+}
+
+.wizard-step {
+  max-width: 640px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.wizard-step h2 {
+  font-size: 1.6rem;
+}
+
+.wizard-hint,
+.progression-so-far {
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.progression-so-far {
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.note-buttons,
+.chord-options,
+.beat-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.note-button {
+  min-width: 3.5rem;
+  padding: 1rem;
+  font-size: 1.4rem;
+  border-radius: 12px;
+  background: #2a2a2c;
+}
+
+.note-button:hover {
+  background: #363638;
+}
+
+.chord-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  background: #2a2a2c;
+  min-width: 6rem;
+}
+
+.chord-option:hover {
+  background: #363638;
+}
+
+.chord-option .roman {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.chord-option .symbol {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.beat-option {
+  padding: 1rem 1.75rem;
+  font-size: 1.15rem;
+  border-radius: 12px;
+  background: #2a2a2c;
+}
+
+.beat-option:hover {
+  background: #363638;
+}
+
+.primary-btn {
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.2rem;
+  padding: 0.9rem 1.8rem;
+  border-radius: 10px;
+}
+
+.primary-btn:active {
+  background: var(--accent-dark);
+}
+
+.wizard-back,
+.wizard-restart {
+  background: none;
+  color: var(--text-dim);
+  text-decoration: underline;
+  padding: 0.25rem;
+}
+
+.wizard-volume {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--text-dim);
+  width: 100%;
+  max-width: 20rem;
+}
+
 .bpm-label input {
   width: 4.5rem;
 }

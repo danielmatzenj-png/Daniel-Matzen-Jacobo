@@ -5,6 +5,16 @@ sintetizadores de melodía y bajo, mezclador, efectos de reverb/delay/filtro,
 guardado de proyectos y exportación a WAV. 100% JavaScript puro + Web Audio
 API, sin frameworks, sin backend, costo $0.
 
+Tiene dos modos:
+
+- **Simple** (por defecto): un asistente guiado de 5 pasos — tocás una nota,
+  te sugiere un acorde, elegís 3 acordes más de una lista sugerida, elegís
+  un ritmo, y la app arma sola el bajo, la melodía y la batería. Resultado:
+  una canción de 4 compases lista para reproducir y descargar en `.wav`, sin
+  tocar ninguna grilla.
+- **Avanzado**: el editor completo (batería, piano roll, mezclador,
+  tonalidad, guardado de proyectos) para quien quiera programar todo a mano.
+
 ## Requisitos
 
 - Node.js (para Vite, el servidor de desarrollo).
@@ -27,16 +37,19 @@ nucleo-beatmaker/
 │   │   ├── context.js        (AudioContext + cadena master)
 │   │   ├── drumSynths.js      (kick, snare, hihat, clap, tom)
 │   │   ├── synthEngine.js      (osciladores para melodía/bajo)
-│   │   ├── theory.js           (escalas y acordes diatónicos)
-│   │   ├── playback.js         (dispara los sonidos de un paso)
+│   │   ├── theory.js           (escalas, acordes diatónicos, sugerencias)
+│   │   ├── playback.js         (dispara/sostiene los sonidos de un paso)
+│   │   ├── songGenerator.js     (progresión + ritmo -> canción completa)
 │   │   ├── effects.js          (reverb, delay, filtro)
 │   │   └── scheduler.js        (motor de tiempo/secuenciador)
 │   ├── ui/
+│   │   ├── wizard.js            (asistente guiado, modo Simple)
 │   │   ├── drumRack.js
 │   │   ├── synthRack.js
 │   │   ├── keyPanel.js
 │   │   ├── transport.js
 │   │   └── mixer.js
+│   ├── beatPresets.js            (patrones de batería por estilo)
 │   ├── state.js                (modelo de datos del proyecto)
 │   ├── storage.js               (guardar/cargar con localStorage)
 │   ├── wavExport.js              (OfflineAudioContext + encoder WAV)
@@ -65,6 +78,14 @@ Cada fase funciona y se puede probar antes de pasar a la siguiente.
 
 Proyecto completo y funcional. Detalles de cada módulo:
 
+- **Modo Simple (asistente)**: tocás una nota (una de las 7 de la
+  tonalidad) → se sugiere y confirma el primer acorde → se sugieren 3
+  acordes más, uno a la vez, según una tabla de progresiones comunes (I-V-vi
+  siempre encaja después de I, por ejemplo) → elegís un estilo de ritmo
+  (Pop, Lo-fi, Reggaetón, Trap) y se genera automáticamente una canción de 4
+  compases: batería (preset elegido), bajo (raíz de cada acorde, sostenida),
+  acordes (sostenidos) y melodía (arpegio simple sobre cada acorde). Desde
+  ahí: reproducir (arriba) o descargar en `.wav`.
 - **Batería**: 16 pasos × 6 pistas (kick, snare, hi-hat cerrado/abierto,
   clap, tom), cada una con botón de disparo manual además del patrón.
 - **Melodía y bajo**: piano roll cromático (C4-C5 y C2-C3), selector de

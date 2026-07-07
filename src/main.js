@@ -11,8 +11,11 @@ import { renderDrumRack } from './ui/drumRack.js';
 import { renderSynthRack } from './ui/synthRack.js';
 import { renderMixer } from './ui/mixer.js';
 import { renderKeyPanel } from './ui/keyPanel.js';
+import { renderWizard } from './ui/wizard.js';
 import { saveProject, loadProject, listProjects, deleteProject } from './storage.js';
 import { exportToWav } from './wavExport.js';
+import { generateSong } from './audio/songGenerator.js';
+import { BEAT_PRESETS } from './beatPresets.js';
 
 const state = createInitialState();
 
@@ -35,7 +38,12 @@ document.querySelector('#app').innerHTML = `
     <h1>Núcleo</h1>
     <div id="transport"></div>
   </header>
-  <main class="layout">
+  <nav class="mode-tabs">
+    <button type="button" class="mode-tab" data-mode="simple">Simple</button>
+    <button type="button" class="mode-tab" data-mode="advanced">Avanzado</button>
+  </nav>
+  <main id="simple-view" class="simple-view"></main>
+  <main id="advanced-view" class="layout">
     <section class="panel">
       <h2>Tonalidad</h2>
       <div id="key-panel"></div>
@@ -85,6 +93,8 @@ document.querySelector('#app').innerHTML = `
   </main>
 `;
 
+const simpleViewContainer = document.querySelector('#simple-view');
+const advancedViewContainer = document.querySelector('#advanced-view');
 const transportContainer = document.querySelector('#transport');
 const drumContainer = document.querySelector('#drum-rack');
 const melodyContainer = document.querySelector('#synth-rack-melody');
@@ -228,6 +238,64 @@ function rerenderAll() {
   renderMixer(mixerContainer, state, mixerHandlers);
 }
 
+// --- Modo simple: asistente guiado (nota -> acordes -> ritmo -> canción) ---
+function rerenderWizard() {
+  renderWizard(simpleViewContainer, state, wizardHandlers);
+}
+
+const wizardHandlers = {
+  onPickFirstChord: (degreeIndex) => {
+    previewChord(chordsTrack.id, String(degreeIndex));
+    state.progression = [degreeIndex];
+    rerenderWizard();
+  },
+  onPickNextChord: (degreeIndex) => {
+    previewChord(chordsTrack.id, String(degreeIndex));
+    state.progression = [...state.progression, degreeIndex];
+    rerenderWizard();
+  },
+  onPickBeat: (presetId) => {
+    const preset = BEAT_PRESETS.find((p) => p.id === presetId);
+    generateSong(state, { progression: state.progression, beatPreset: preset });
+    rerenderWizard();
+    rerenderAll();
+  },
+  onStepBack: () => {
+    if (state.beatPresetId) {
+      state.beatPresetId = null;
+    } else if (state.progression.length > 0) {
+      state.progression = state.progression.slice(0, -1);
+    }
+    rerenderWizard();
+  },
+  onDownload: async () => {
+    await exportToWav(state, { bars: 1, filename: 'mi-cancion.wav' });
+  },
+  onRestart: () => {
+    scheduler.stop();
+    transportHandle.setPlaying(false);
+    state.progression = [];
+    state.beatPresetId = null;
+    rerenderWizard();
+  },
+  onMasterChange: () => {
+    updateMasterParams(getMasterChain(), state.master);
+  },
+};
+
+function setMode(mode) {
+  state.mode = mode;
+  simpleViewContainer.style.display = mode === 'simple' ? '' : 'none';
+  advancedViewContainer.style.display = mode === 'advanced' ? '' : 'none';
+  document.querySelectorAll('.mode-tab').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+}
+
+document.querySelectorAll('.mode-tab').forEach((btn) => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+});
+
 const scheduler = new Scheduler({
   getState: () => state,
   onScheduleStep: (stepIndex, time) => scheduleStepSounds(getAudioContext(), channels, state, stepIndex, time),
@@ -242,6 +310,8 @@ const scheduler = new Scheduler({
 setupKeyboardShortcuts({ onTogglePlay: () => transportHandlers.onTogglePlay() });
 
 rerenderAll();
+rerenderWizard();
+setMode(state.mode);
 
 // --- Panel de proyecto: guardar/cargar (localStorage) y exportar a WAV ---
 const nameInput = document.querySelector('#project-name');
@@ -280,6 +350,9 @@ function migrateLoadedState(loaded) {
   for (const track of loaded.synthTracks) {
     if (!track.type) track.type = track.id === 'chords' ? 'chords' : 'notes';
   }
+  if (!loaded.mode) loaded.mode = 'advanced';
+  if (!loaded.progression) loaded.progression = [];
+  if (loaded.beatPresetId === undefined) loaded.beatPresetId = null;
   return loaded;
 }
 
@@ -292,9 +365,13 @@ function replaceState(newState) {
   state.master = newState.master;
   state.key = newState.key;
   state.scaleLock = newState.scaleLock;
+  state.progression = newState.progression;
+  state.beatPresetId = newState.beatPresetId;
   syncTrackRefs();
   syncAudioFromState();
   rerenderAll();
+  rerenderWizard();
+  setMode(newState.mode);
 }
 
 document.querySelector('#save-btn').addEventListener('click', () => {

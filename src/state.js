@@ -73,6 +73,11 @@ export function createInitialState() {
     // encaja armónicamente por construcción.
     key: { root: 'C', scale: 'major' },
     scaleLock: true,
+    // Modo simple: "note"->"chord2"->"chord3"->"chord4"->"beat"->"ready",
+    // derivado de progression.length y beatPresetId (ver ui/wizard.js).
+    mode: 'simple',
+    progression: [],
+    beatPresetId: null,
   };
 }
 

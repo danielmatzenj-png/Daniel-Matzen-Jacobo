@@ -74,3 +74,34 @@ export function getDiatonicChordDegrees(root, scaleType, baseOctave = 3) {
     };
   });
 }
+
+// "Después de este acorde, ¿cuáles suenan bien?" — una tabla simple de
+// progresiones habituales (armonía común de pop/clásica), en orden de grado.
+// Se usa en el asistente guiado (ui/wizard.js) para sugerir 2-3 acordes
+// siguientes sin que el usuario tenga que saber nada de teoría musical.
+const NEXT_CHORD_SUGGESTIONS = {
+  major: [
+    [3, 4, 5], // I    -> IV, V, vi
+    [4, 3, 0], // ii   -> V, IV, I
+    [5, 3, 1], // iii  -> vi, IV, ii
+    [4, 0, 1], // IV   -> V, I, ii
+    [0, 5, 3], // V    -> I, vi, IV
+    [3, 4, 1], // vi   -> IV, V, ii
+    [0, 5, 3], // vii° -> I, vi, IV
+  ],
+  minor: [
+    [5, 6, 3], // i    -> VI, VII, iv
+    [4, 0, 5], // ii°  -> v, i, VI
+    [6, 5, 3], // III  -> VII, VI, iv
+    [0, 4, 6], // iv   -> i, v, VII
+    [0, 5, 3], // v    -> i, VI, iv
+    [6, 3, 0], // VI   -> VII, iv, i
+    [0, 5, 3], // VII  -> i, VI, iv
+  ],
+};
+
+export function suggestNextChords(root, scaleType, fromDegree, count = 3) {
+  const degrees = getDiatonicChordDegrees(root, scaleType);
+  const suggestedDegrees = NEXT_CHORD_SUGGESTIONS[scaleType][fromDegree].slice(0, count);
+  return suggestedDegrees.map((degreeIndex) => ({ degreeIndex, ...degrees[degreeIndex] }));
+}
