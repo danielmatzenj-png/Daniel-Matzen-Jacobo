@@ -1,0 +1,7 @@
+# Dependencias de Claude3D (fuera de Blender).
+#
+# Blender trae su propio Python; el add-on (blender_addon/) NO necesita instalar
+# nada. Estas dependencias son para el servidor MCP y el generador headless.
+
+anthropic>=0.40.0     # API de Claude (generate.py)
+mcp>=1.2.0            # Servidor MCP para Claude Desktop / Claude Code
