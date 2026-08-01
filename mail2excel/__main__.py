@@ -16,7 +16,7 @@ import argparse
 import sys
 
 from .ai_extractor import apply_ai_fallback, ai_enabled
-from .config import load_config
+from .config import load_config, load_env
 from .excel_writer import write_records
 from .extractor import classify_all
 from .mail_reader import read_messages
@@ -118,6 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_env()  # carga GROQ_API_KEY desde .env si existe
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

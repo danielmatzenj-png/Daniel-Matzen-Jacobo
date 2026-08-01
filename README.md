@@ -99,8 +99,23 @@ Para activarlo:
 
 ```bash
 pip install groq
-export GROQ_API_KEY="gsk_..."      # gratis en https://console.groq.com
 ```
+
+Y tu clave de Groq (gratis en https://console.groq.com) por cualquiera de estas
+vías — el programa las lee en este orden:
+
+1. **Archivo `.env`** en la carpeta del proyecto (cómodo, y **no se sube** a git):
+   ```bash
+   cp .env.example .env
+   # edita .env y pega tu clave:  GROQ_API_KEY=gsk_...
+   ```
+2. **Variable de entorno** (útil para las tareas automáticas):
+   ```bash
+   export GROQ_API_KEY="gsk_..."
+   ```
+
+> Nunca escribas la clave dentro del código: este repo está en GitHub y quedaría
+> pública. El `.env` está en `.gitignore` justamente para evitar eso.
 
 Si falta el paquete o la clave, la automatización **sigue funcionando solo con
 reglas** y lo avisa por consola. Las filas tocadas por IA se marcan en *Notes*

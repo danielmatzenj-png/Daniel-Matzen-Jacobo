@@ -8,7 +8,25 @@ from typing import Any
 
 import yaml
 
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yaml"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+
+
+def load_env(path: str | os.PathLike[str] | None = None) -> None:
+    """Carga variables de un archivo .env local (p. ej. GROQ_API_KEY).
+
+    El archivo .env está en .gitignore: NUNCA se sube al repositorio. Las
+    variables ya presentes en el entorno tienen prioridad.
+    """
+    env_path = Path(path) if path else PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
 def _expand(path: str) -> str:
