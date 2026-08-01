@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from .ai_extractor import apply_ai_fallback, ai_enabled
 from .config import load_config
 from .excel_writer import write_records
 from .extractor import classify_all
@@ -36,6 +37,16 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
     records = classify_all(emails, cfg)
     print(f"  {len(records)} correo(s) clasificado(s) tras filtros.")
+
+    if ai_enabled(cfg) and not args.no_ai:
+        ai = apply_ai_fallback(records, cfg)
+        if ai.get("motivo"):
+            print(f"  (IA de respaldo desactivada: {ai['motivo']})")
+        elif ai["consultados"]:
+            print(
+                f"  IA de respaldo: {ai['consultados']} correo(s) consultado(s), "
+                f"{ai['campos_completados']} campo(s) completado(s)."
+            )
 
     if args.dry_run:
         _preview(records, headers, cfg)
@@ -95,6 +106,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("-o", "--output", default=None, help="Ruta del Excel de salida.")
     run.add_argument("--dry-run", action="store_true", help="Muestra lo que haría sin escribir.")
     run.add_argument("--summary", action="store_true", help="Enviar también el resumen tras el run.")
+    run.add_argument("--no-ai", action="store_true", help="Desactivar el respaldo con IA en esta ejecución.")
     run.set_defaults(func=_cmd_run)
 
     summ = sub.add_parser("summary", help="Envía el resumen diario por correo.")

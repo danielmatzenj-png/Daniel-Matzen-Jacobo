@@ -84,6 +84,39 @@ launchctl start com.mail2excel.run
 > La Mac debe estar encendida a esas horas. Si está suspendida, la tarea se
 > ejecuta al despertar.
 
+## Respaldo con IA (Claude) — modelo híbrido
+
+Por defecto la extracción es **por reglas** (gratis, local, instantánea). Cuando
+las reglas dejan un campo vacío (p. ej. no encuentran el BL o la referencia),
+se consulta a **Claude** con el texto del correo + PDF para intentar
+completarlo. Así el costo y el envío de datos a la nube son mínimos: la IA solo
+se usa de respaldo.
+
+Para activarlo:
+
+```bash
+pip install anthropic
+export ANTHROPIC_API_KEY="sk-ant-..."   # tu clave de Anthropic
+```
+
+Si falta el paquete o la clave, la automatización **sigue funcionando solo con
+reglas** y lo avisa por consola. Las filas completadas por IA se marcan en
+*Notes* con «completado con IA».
+
+Configuración en `config.yaml → ai`:
+
+- **`enabled`** — activar/desactivar el respaldo.
+- **`model`** — `claude-opus-5` por defecto; puedes bajar a `claude-sonnet-5` o
+  `claude-haiku-4-5` para reducir costo.
+- **`fallback_fields`** — qué campos disparan la IA si quedaron vacíos.
+- **`max_chars`** — cuánto texto del correo/PDF se envía.
+
+Desactivar solo en una corrida: `python -m mail2excel run --no-ai`.
+
+> Privacidad: con la IA en la nube activada, el texto del correo/PDF de los
+> casos que las reglas no resolvieron se envía a Anthropic. Con `enabled: false`
+> nada sale de tu Mac.
+
 ## Configuración (`config.yaml`)
 
 - **`source`** — cuenta/buzón de Mail.app, `only_unread` (procesar solo no
@@ -135,7 +168,8 @@ mail2excel/
   config.py       # carga de config.yaml
   mail_reader.py  # AppleScript (Mail.app) + guardado de PDF + fuente JSON
   pdf_reader.py   # extracción de texto de los PDF adjuntos
-  extractor.py    # clasificación: cliente, BL, ETD/ETA, referencia, notas
+  extractor.py    # clasificación por reglas: cliente, BL, ETD/ETA, referencia, notas
+  ai_extractor.py # respaldo con IA (Claude) para los campos que faltan
   excel_writer.py # escritura/append a la tabla BLs con deduplicación
   summary.py      # resumen diario + envío por Apple Mail
   dates.py        # normalización de fechas a DD.MM.YY

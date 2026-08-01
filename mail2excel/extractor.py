@@ -88,15 +88,6 @@ def classify(email: EmailMessage, cfg: dict[str, Any]) -> BLRecord:
     etd = _date_near_label(text, dates_cfg.get("etd_labels", []), fmt)
     eta = _date_near_label(text, dates_cfg.get("eta_labels", []), fmt)
 
-    # Notas: registra anomalías.
-    notes: list[str] = []
-    if not bl_nr:
-        notes.append("no hay BL")
-    if not reference:
-        notes.append("falta referencia interna")
-    if not customer:
-        notes.append("cliente no reconocido")
-
     values = {
         "status": cfg.get("status_value", "PEND"),
         "day": email_date_to(fmt, email.date),
@@ -106,9 +97,25 @@ def classify(email: EmailMessage, cfg: dict[str, Any]) -> BLRecord:
         "eta": eta,
         "pcd": "",                       # siempre vacío por indicación
         "internal_reference": reference,
-        "notes": "; ".join(notes),
+        "notes": "",
     }
+    values["notes"] = compute_notes(values, cfg)
     return BLRecord(email=email, values=values)
+
+
+def compute_notes(values: dict[str, Any], cfg: dict[str, Any], ai_used: bool = False) -> str:
+    """Genera la columna Notes a partir de los valores finales de la fila."""
+    notes: list[str] = []
+    if not values.get("bl_nr"):
+        notes.append("no hay BL")
+    if not values.get("internal_reference"):
+        notes.append("falta referencia interna")
+    known = {c.get("name") for c in cfg.get("customers", [])}
+    if values.get("customer") not in known:
+        notes.append("cliente no reconocido")
+    if ai_used:
+        notes.append("completado con IA")
+    return "; ".join(notes)
 
 
 def passes_filters(email: EmailMessage, filters: dict[str, Any]) -> bool:
