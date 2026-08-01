@@ -84,38 +84,41 @@ launchctl start com.mail2excel.run
 > La Mac debe estar encendida a esas horas. Si está suspendida, la tarea se
 > ejecuta al despertar.
 
-## Respaldo con IA (Claude) — modelo híbrido
+## IA con Groq (modelos Llama)
 
-Por defecto la extracción es **por reglas** (gratis, local, instantánea). Cuando
-las reglas dejan un campo vacío (p. ej. no encuentran el BL o la referencia),
-se consulta a **Claude** con el texto del correo + PDF para intentar
-completarlo. Así el costo y el envío de datos a la nube son mínimos: la IA solo
-se usa de respaldo.
+La extracción combina **reglas** (gratis, local) con **IA de Groq** (modelos
+Llama, muy rápidos y con capa gratuita). Hay dos modos, en `config.yaml → ai`:
+
+- **`mode: always`** (por defecto) — la IA se consulta en **cada correo** y sus
+  valores mandan; las reglas quedan como red de seguridad para lo que la IA
+  deje vacío.
+- **`mode: fallback`** — mandan las reglas y la IA solo **rellena los campos que
+  falten** (menos llamadas).
 
 Para activarlo:
 
 ```bash
-pip install anthropic
-export ANTHROPIC_API_KEY="sk-ant-..."   # tu clave de Anthropic
+pip install groq
+export GROQ_API_KEY="gsk_..."      # gratis en https://console.groq.com
 ```
 
 Si falta el paquete o la clave, la automatización **sigue funcionando solo con
-reglas** y lo avisa por consola. Las filas completadas por IA se marcan en
-*Notes* con «completado con IA».
+reglas** y lo avisa por consola. Las filas tocadas por IA se marcan en *Notes*
+con «completado con IA».
 
 Configuración en `config.yaml → ai`:
 
-- **`enabled`** — activar/desactivar el respaldo.
-- **`model`** — `claude-opus-5` por defecto; puedes bajar a `claude-sonnet-5` o
-  `claude-haiku-4-5` para reducir costo.
-- **`fallback_fields`** — qué campos disparan la IA si quedaron vacíos.
+- **`enabled`** — activar/desactivar la IA.
+- **`model`** — `llama-3.3-70b-versatile` por defecto; `llama-3.1-8b-instant`
+  es más rápido y barato.
+- **`mode`** — `always` o `fallback` (ver arriba).
+- **`fallback_fields`** — qué campos gestiona la IA.
 - **`max_chars`** — cuánto texto del correo/PDF se envía.
 
 Desactivar solo en una corrida: `python -m mail2excel run --no-ai`.
 
-> Privacidad: con la IA en la nube activada, el texto del correo/PDF de los
-> casos que las reglas no resolvieron se envía a Anthropic. Con `enabled: false`
-> nada sale de tu Mac.
+> Privacidad: con la IA activada, el texto del correo/PDF se envía a Groq. Con
+> `enabled: false` nada sale de tu Mac (solo reglas).
 
 ## Configuración (`config.yaml`)
 
@@ -169,7 +172,7 @@ mail2excel/
   mail_reader.py  # AppleScript (Mail.app) + guardado de PDF + fuente JSON
   pdf_reader.py   # extracción de texto de los PDF adjuntos
   extractor.py    # clasificación por reglas: cliente, BL, ETD/ETA, referencia, notas
-  ai_extractor.py # respaldo con IA (Claude) para los campos que faltan
+  ai_extractor.py # IA con Groq (Llama) para extraer/rellenar campos
   excel_writer.py # escritura/append a la tabla BLs con deduplicación
   summary.py      # resumen diario + envío por Apple Mail
   dates.py        # normalización de fechas a DD.MM.YY

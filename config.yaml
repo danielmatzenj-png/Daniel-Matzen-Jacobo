@@ -112,14 +112,14 @@ dates:
     - "llegada"
     - "arrival"
 
-# --- Respaldo con IA (Claude) ---
-# Modelo HÍBRIDO: primero reglas (gratis y local); si quedan campos vacíos,
-# se consulta a Claude con el texto del correo + PDF. Requiere:
-#   pip install anthropic   y   export ANTHROPIC_API_KEY=...
+# --- IA con Groq (modelos Llama) ---
+# Se consulta a Groq con el texto del correo + PDF. Requiere:
+#   pip install groq   y   export GROQ_API_KEY=...   (gratis en console.groq.com)
 ai:
   enabled: true
-  model: "claude-opus-5"     # puedes bajar a "claude-sonnet-5" o "claude-haiku-4-5" para ahorrar
-  # Campos que dispararán la IA si quedaron vacíos tras las reglas.
+  model: "llama-3.3-70b-versatile"   # o "llama-3.1-8b-instant" (más rápido/barato)
+  mode: "always"             # "always" = la IA en cada correo; "fallback" = solo si faltan campos
+  # Campos que gestiona la IA.
   fallback_fields: ["customer", "bl_nr", "etd", "eta", "internal_reference"]
   max_chars: 6000            # recorte del texto (correo+PDF) enviado a la IA
 
