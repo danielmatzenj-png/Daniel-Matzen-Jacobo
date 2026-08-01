@@ -1,7 +1,7 @@
 """Lectura de correos desde Apple Mail (Mail.app) vía AppleScript.
 
-Incluye una fuente alternativa basada en JSON para poder desarrollar y probar
-la lógica fuera de una Mac (por ejemplo en CI o en Linux).
+Guarda los PDF adjuntos, extrae su texto y ofrece una fuente JSON alternativa
+para desarrollar y probar la lógica fuera de una Mac.
 """
 
 from __future__ import annotations
@@ -9,17 +9,17 @@ from __future__ import annotations
 import json
 import platform
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
 from .models import EmailMessage
+from .pdf_reader import extract_many
 
-# Separadores de registro/campo: caracteres de control ASCII que no aparecen
-# de forma natural en el texto de un correo.
 RS = "\x1e"  # separador de registro (entre correos)
-US = "\x1f"  # separador de campo (dentro de un correo)
+US = "\x1f"  # separador de campo
+GS = "\x1d"  # separador de adjuntos dentro del campo
 
-# Plantilla de AppleScript. Los marcadores {{...}} se sustituyen en Python.
 APPLESCRIPT_TEMPLATE = r"""
 on pad(n)
     set n to n as integer
@@ -39,16 +39,19 @@ end isoDate
 
 set rs to (ASCII character 30)
 set us to (ASCII character 31)
+set gs to (ASCII character 29)
+set attFolder to "{{ATTACH_DIR}}"
 set output to ""
+set i to 0
 
 tell application "Mail"
     set theMessages to {{MAILBOX_EXPR}}
-    {{UNREAD_FILTER}}
     set msgCount to count of theMessages
     if msgCount > {{LIMIT}} then
         set theMessages to items 1 thru {{LIMIT}} of theMessages
     end if
     repeat with m in theMessages
+        set i to i + 1
         try
             set d to my isoDate(date received of m)
         on error
@@ -69,46 +72,51 @@ tell application "Mail"
         on error
             set c to ""
         end try
-        set output to output & d & us & s & us & sub & us & c & rs
+        set attPaths to ""
+        {{SAVE_ATTACHMENTS}}
+        set output to output & d & us & s & us & sub & us & c & us & attPaths & rs
     end repeat
 end tell
 
 return output
 """
 
+SAVE_ATTACHMENTS_SNIPPET = r"""
+        try
+            repeat with a in (mail attachments of m)
+                try
+                    set fn to name of a
+                    if fn ends with ".pdf" or fn ends with ".PDF" then
+                        set savePath to attFolder & "/" & (i as string) & "_" & fn
+                        save a in (POSIX file savePath)
+                        set attPaths to attPaths & savePath & gs
+                    end if
+                end try
+            end repeat
+        end try
+"""
 
-def _build_mailbox_expr(account: str | None, mailbox: str) -> str:
-    """Construye la expresión AppleScript que referencia el buzón."""
+
+def _build_mailbox_expr(account: str | None, mailbox: str, only_unread: bool) -> str:
     if account:
-        return f'messages of mailbox "{mailbox}" of account "{account}"'
-    if mailbox.strip().lower() in ("inbox", "entrada", ""):
-        # 'inbox' es el buzón unificado de todas las cuentas en Mail.app.
-        return "messages of inbox"
-    return f'messages of mailbox "{mailbox}"'
-
-
-def _render_script(
-    account: str | None,
-    mailbox: str,
-    only_unread: bool,
-    limit: int,
-) -> str:
-    mailbox_expr = _build_mailbox_expr(account, mailbox)
-    unread_filter = (
-        "set theMessages to (a reference to (every item of theMessages whose read status is false))"
-        if only_unread
-        else ""
-    )
-    # Con filtro de no-leídos es más eficiente construir la referencia directamente.
+        base = f'messages of mailbox "{mailbox}" of account "{account}"'
+    elif mailbox.strip().lower() in ("inbox", "entrada", ""):
+        base = "messages of inbox"
+    else:
+        base = f'messages of mailbox "{mailbox}"'
     if only_unread:
-        mailbox_expr = mailbox_expr + " whose read status is false"
-        unread_filter = ""
+        base = base + " whose read status is false"
+    return base
 
+
+def _render_script(account, mailbox, only_unread, limit, attach_dir, save_attachments) -> str:
+    mailbox_expr = _build_mailbox_expr(account, mailbox, only_unread)
     return (
         APPLESCRIPT_TEMPLATE
         .replace("{{MAILBOX_EXPR}}", mailbox_expr)
-        .replace("{{UNREAD_FILTER}}", unread_filter)
         .replace("{{LIMIT}}", str(int(limit)))
+        .replace("{{ATTACH_DIR}}", attach_dir)
+        .replace("{{SAVE_ATTACHMENTS}}", SAVE_ATTACHMENTS_SNIPPET if save_attachments else "")
     )
 
 
@@ -119,10 +127,10 @@ def _parse_output(raw: str, mailbox: str) -> list[EmailMessage]:
         if not record.strip():
             continue
         parts = record.split(US)
-        # Rellena por si un campo faltó.
-        while len(parts) < 4:
+        while len(parts) < 5:
             parts.append("")
-        date, sender, subject, body = parts[0], parts[1], parts[2], parts[3]
+        date, sender, subject, body, attachments = parts[:5]
+        att_paths = [p for p in attachments.split(GS) if p.strip()]
         messages.append(
             EmailMessage(
                 date=date.strip(),
@@ -130,6 +138,7 @@ def _parse_output(raw: str, mailbox: str) -> list[EmailMessage]:
                 subject=subject.strip(),
                 body=body,
                 mailbox=mailbox,
+                attachments=att_paths,
             )
         )
     return messages
@@ -140,42 +149,45 @@ def read_from_apple_mail(
     mailbox: str = "inbox",
     only_unread: bool = False,
     limit: int = 200,
+    save_attachments: bool = True,
 ) -> list[EmailMessage]:
-    """Lee correos de Mail.app. Solo funciona en macOS."""
+    """Lee correos de Mail.app (solo macOS) y extrae el texto de los PDF adjuntos."""
     if platform.system() != "Darwin":
         raise RuntimeError(
             "La lectura de Apple Mail solo funciona en macOS. "
             "Usa la fuente 'json' (--source json --input archivo.json) para probar en otros sistemas."
         )
 
-    script = _render_script(account, mailbox, only_unread, limit)
+    attach_dir = tempfile.mkdtemp(prefix="mail2excel_att_")
+    script = _render_script(account, mailbox, only_unread, limit, attach_dir, save_attachments)
     try:
         proc = subprocess.run(
             ["osascript", "-"],
             input=script,
             capture_output=True,
             text=True,
-            timeout=600,
+            timeout=900,
         )
-    except FileNotFoundError as exc:  # pragma: no cover - depende del sistema
+    except FileNotFoundError as exc:  # pragma: no cover
         raise RuntimeError("No se encontró 'osascript'. ¿Estás en macOS?") from exc
 
     if proc.returncode != 0:
         raise RuntimeError(
-            "AppleScript falló al leer Mail.app. "
-            "Concede permisos de Automatización a la app de terminal en "
-            "Ajustes del Sistema > Privacidad y seguridad > Automatización.\n"
+            "AppleScript falló al leer Mail.app. Concede permisos de Automatización a "
+            "la terminal en Ajustes del Sistema > Privacidad y seguridad > Automatización.\n"
             f"Detalle: {proc.stderr.strip()}"
         )
 
-    return _parse_output(proc.stdout, mailbox)
+    messages = _parse_output(proc.stdout, mailbox)
+    for msg in messages:
+        if msg.attachments:
+            msg.attachment_text = extract_many(msg.attachments)
+    return messages
 
 
 def read_from_json(path: str | Path) -> list[EmailMessage]:
-    """Lee correos de un archivo JSON (lista de objetos con date/sender/subject/body).
-
-    Útil para pruebas y para desarrollar fuera de una Mac.
-    """
+    """Fuente de prueba: lista de correos con date/sender/subject/body y, opcional,
+    'attachment_text' (para simular el contenido del PDF) o 'attachments' (rutas)."""
     data: Any = json.loads(Path(path).read_text(encoding="utf-8"))
     if isinstance(data, dict) and "messages" in data:
         data = data["messages"]
@@ -184,6 +196,10 @@ def read_from_json(path: str | Path) -> list[EmailMessage]:
 
     messages: list[EmailMessage] = []
     for item in data:
+        att = item.get("attachments", []) or []
+        att_text = str(item.get("attachment_text", "") or "")
+        if not att_text and att:
+            att_text = extract_many([str(p) for p in att])
         messages.append(
             EmailMessage(
                 date=str(item.get("date", "")),
@@ -191,6 +207,8 @@ def read_from_json(path: str | Path) -> list[EmailMessage]:
                 subject=str(item.get("subject", "")),
                 body=str(item.get("body", "")),
                 mailbox=str(item.get("mailbox", "json")),
+                attachments=[str(p) for p in att],
+                attachment_text=att_text,
             )
         )
     return messages
@@ -209,4 +227,5 @@ def read_messages(cfg: dict[str, Any], source: str, input_path: str | None) -> l
         mailbox=src.get("mailbox", "inbox"),
         only_unread=bool(src.get("only_unread", False)),
         limit=int(src.get("max_messages", 200)),
+        save_attachments=bool(src.get("save_attachments", True)),
     )

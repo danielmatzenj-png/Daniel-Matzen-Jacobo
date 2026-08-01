@@ -1,26 +1,32 @@
 [
   {
-    "date": "2026-07-15 09:32:10",
-    "sender": "Proveedor Norte SA <facturacion@proveedornorte.com>",
-    "subject": "Factura Nº F-2026-0481 - Julio",
-    "body": "Estimado cliente,\n\nAdjuntamos su factura.\n\nProveedor: Proveedor Norte SA\nNº de factura: F-2026-0481\nFecha de emisión: 15/07/2026\nBase imponible: 1.200,00\nIVA (21%): 252,00\nTotal a pagar: 1.452,00 EUR\n\nGracias por su confianza."
+    "date": "2026-07-29 09:32:10",
+    "sender": "La Minita Ops <ops@laminita.com>",
+    "subject": "Shipment update - GF29723",
+    "body": "Hola,\n\nAdjuntamos la confirmación de embarque.\n\nBL Nr: MEDUM8183896\nInternal Ref: GF29723\nETD: 26.07.26\nETA: 22.08.26\n\nSaludos, La Minita"
   },
   {
-    "date": "2026-07-18 14:05:00",
-    "sender": "Amazon <auto-confirm@amazon.com>",
-    "subject": "Tu pedido 112-3456789-1011121 ha sido enviado",
-    "body": "Hola,\n\nGracias por tu compra.\nPedido: 112-3456789-1011121\nfecha 18/07/2026\nTotal: $89.99 USD\n\nSaludos."
+    "date": "2026-07-29 14:05:00",
+    "sender": "TCS LLC <shipping@tcs-llc.com>",
+    "subject": "New booking confirmation",
+    "body": "Hello,\n\nPlease find the booking details.\n\nBill of Lading: MEDUE5324567\nReference: P-8294\nEstimated time of departure: 15/08/2026\nEstimated time of arrival: 26/07/2026\n\nRegards, TCS"
   },
   {
-    "date": "2026-07-20 11:11:11",
+    "date": "2026-07-30 08:00:00",
+    "sender": "La Minita <docs@laminita.com>",
+    "subject": "Documentos pendientes CTR",
+    "body": "Buenos días,\n\nAún no tenemos el BL de esta carga.\nReferencia interna: GF29923\nfecha de embarque 31.07.26\nfecha de arribo 22.08.26\n\nGracias."
+  },
+  {
+    "date": "2026-07-31 11:11:11",
+    "sender": "PCT LLC <ops@pctllc.com>",
+    "subject": "Ocean shipment ONE",
+    "body": "Hi,\n\nSee shipment info below.\nB/L No: ONEYMNGG12345\nOrder: P51428\nETD: 06 Aug 2026\nETA: 19 Aug 2026\n\nThanks."
+  },
+  {
+    "date": "2026-07-31 12:00:00",
     "sender": "Boletines Marketing <news@promos.example>",
-    "subject": "¡Ofertas de verano imperdibles!",
-    "body": "Descuentos de hasta el 50%. Nada de facturas aquí, solo promociones."
-  },
-  {
-    "date": "2026-07-22 08:00:00",
-    "sender": "Servicios Cloud <billing@cloudservices.io>",
-    "subject": "Invoice INV-99812 for your subscription",
-    "body": "Hello,\n\nInvoice number: INV-99812\nDate: 2026-07-22\nSubtotal: 40.00\nTax: 8.40\nTotal due: 48.40 USD\n\nThank you."
+    "subject": "Ofertas de verano",
+    "body": "Nada que registrar, solo promociones."
   }
 ]

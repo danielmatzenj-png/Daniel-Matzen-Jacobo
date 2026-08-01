@@ -1,123 +1,124 @@
-# mail2excel — Apple Mail → Excel de facturas/pedidos
+# mail2excel — Apple Mail → Tabla BLs (+ resumen diario)
 
-Automatización que lee tus correos de **Apple Mail (Mail.app)** en la Mac,
-extrae los datos de **facturas y pedidos** (proveedor, nº de factura, nº de
-pedido, fecha, base imponible, IVA, total, moneda…) y los vuelca a un archivo
-**Excel (.xlsx)**. Se puede ejecutar cuantas veces quieras: no duplica filas.
+Automatización para tu **Mac** que, varias veces al día:
+
+1. Lee los correos nuevos de **Apple Mail (Mail.app)**.
+2. Abre y lee el **PDF adjunto** (si lo hay) y revisa también su contenido.
+3. Clasifica cada correo como una fila en tu Excel **`Tabla BLs.xlsx`** (Descargas).
+4. Al final del día envía un **resumen** a `sebasmatzen@gmail.com`.
 
 Todo corre **localmente** en tu Mac vía AppleScript; no usa claves ni APIs
 externas.
 
-## Cómo funciona
+## Cómo rellena cada columna
 
-```
-Apple Mail (Mail.app)
-        │  AppleScript (osascript)
-        ▼
-  mail_reader ──► lista de correos (fecha, remitente, asunto, cuerpo)
-        │
-        ▼
-   extractor  ──► aplica las expresiones de config.yaml a cada correo
-        │           (proveedor, nº factura, total, IVA, …)
-        ▼
- excel_writer ──► escribe/actualiza facturas.xlsx (sin duplicar)
-```
+| Columna                 | Qué pone                                                        |
+|-------------------------|----------------------------------------------------------------|
+| **Status**              | Siempre `PEND`.                                                 |
+| **Day**                 | Fecha en que se envió el correo (`DD.MM.YY`).                   |
+| **Customer**            | Empresa del remitente (La Minita, PCT LLC, TCS LLC, Cafe Capris…). |
+| **BL Nr**               | Número de BL del correo/PDF (por etiqueta o prefijo de naviera). |
+| **ETD**                 | Fecha estimada de embarque.                                    |
+| **ETA**                 | Fecha estimada de desembarque.                                |
+| **PCD**                 | Se deja vacío (por indicación).                               |
+| **Internal Reference Nr** | Nº de pedido interno según el prefijo del cliente (GF…, P5…, P-…, S…). |
+| **Notes**               | Anomalías: *no hay BL*, *falta referencia interna*, etc.      |
+
+Cada fila se lee del **cuerpo del correo y del texto del PDF adjunto**.
 
 ## Requisitos
 
-- macOS con la app **Mail** configurada con tus cuentas.
+- macOS con la app **Mail** ya configurada con tus cuentas.
 - **Python 3.10+**.
-- Permiso de **Automatización** para que tu terminal controle Mail
-  (la primera ejecución lo pedirá; si no, actívalo en *Ajustes del Sistema ›
-  Privacidad y seguridad › Automatización*).
+- Permiso de **Automatización** para que la terminal controle Mail (la primera
+  ejecución lo pide; si no, actívalo en *Ajustes del Sistema › Privacidad y
+  seguridad › Automatización*).
 
 ## Instalación
 
 ```bash
+cd <carpeta-del-proyecto>
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Uso
-
-1. Edita `config.yaml` (buzón, filtros, campos y ruta del Excel).
-2. Ejecuta:
+## Uso manual
 
 ```bash
+# Clasificar los correos nuevos en la tabla BLs
 python -m mail2excel run
-# o bien:
-./scripts/run.sh
+# o:
+./scripts/run.sh run
+
+# Enviar el resumen del día
+python -m mail2excel summary
 ```
 
-Verás algo como:
+- `python -m mail2excel run --dry-run` muestra lo que haría **sin escribir**.
+- `python -m mail2excel run --summary` clasifica y además envía el resumen.
 
-```
-› Leyendo correos (fuente: applescript)…
-  200 correo(s) leído(s).
-  12 correo(s) tras aplicar filtros.
-✓ Excel actualizado: ~/Documents/facturas.xlsx
-  Filas nuevas: 12 · omitidas (duplicadas): 0 · total en hoja: 12
-```
-
-### Ver qué haría, sin escribir
+## Ejecutar varias veces al día (automático)
 
 ```bash
-python -m mail2excel run --dry-run
+./scripts/install-launchd.sh
 ```
 
-### Probar sin Mac / sin Mail.app
+Instala dos tareas de `launchd`:
 
-Hay una fuente de prueba basada en JSON (la misma que usan los tests):
+- **`com.mail2excel.run`** → clasifica correos a las **9, 11, 13, 15 y 17 h**.
+- **`com.mail2excel.summary`** → envía el resumen a las **18:05 h**.
+
+Los horarios se editan en `scripts/install-launchd.sh`. Para quitarlas:
 
 ```bash
-python -m mail2excel run --source json --input tests/sample_emails.json --output salida.xlsx
+./scripts/uninstall-launchd.sh
 ```
+
+Logs en `logs/run.log` y `logs/summary.log`. Para forzar una corrida ya:
+
+```bash
+launchctl start com.mail2excel.run
+```
+
+> La Mac debe estar encendida a esas horas. Si está suspendida, la tarea se
+> ejecuta al despertar.
 
 ## Configuración (`config.yaml`)
 
-- **`source`** — cuenta y buzón de Mail.app, si procesar solo no leídos y el
-  máximo de correos por ejecución.
-- **`filters`** — qué correos entran: por remitente, por palabras en el asunto
-  (por defecto: *factura, invoice, pedido, recibo, comprobante*), por texto del
-  cuerpo y por rango de fechas.
-- **`output`** — ruta y nombre de la hoja del Excel.
-- **`fields`** — **una columna por campo**. Cada campo define:
-  - `type`: `text` (por defecto), `amount` (normaliza importes `1.234,56` / `$1,234.56`) o `date`.
-  - `from`: origen alternativo si ninguna expresión coincide (`sender`, `sender_email`, `sender_domain`, `date`, `subject`).
-  - `patterns`: lista de expresiones regulares; se toma el **grupo 1** del primer match.
+- **`source`** — cuenta/buzón de Mail.app, `only_unread` (procesar solo no
+  leídos, recomendado) y `save_attachments` (leer PDF).
+- **`output`** — ruta del Excel (`~/Downloads/Tabla BLs.xlsx`), hoja
+  (`Sheet1`), las **cabeceras exactas** y el formato de fecha.
+- **`customers`** — cómo se reconoce cada cliente y el patrón de su nº de
+  referencia interno.
+- **`bl`** — etiquetas y prefijos de naviera para detectar el BL.
+- **`dates`** — etiquetas que preceden a ETD/ETA.
+- **`summary`** — destinatario y asunto del resumen.
 
-### Añadir o cambiar un campo
-
-Por ejemplo, para capturar un CIF/NIF del proveedor, añade en `fields`:
+### Añadir un cliente nuevo
 
 ```yaml
-  cif:
-    patterns:
-      - '(?:cif|nif)\s*[:\-]?\s*([A-Z0-9]{8,10})'
+customers:
+  - name: "Nuevo Cliente"
+    match: ["nuevo cliente", "nuevocliente.com"]
+    reference_pattern: 'NC\d{4,6}'
 ```
-
-La próxima ejecución creará esa columna automáticamente.
-
-> Nota: si cambias las columnas, empieza con un Excel nuevo (u otra ruta), ya
-> que la deduplicación compara la estructura de columnas del archivo existente.
 
 ## Deduplicación
 
-Cada fila lleva una clave oculta:
+Al reejecutar, cada correo ya registrado se **omite** (clave por BL, o por
+referencia interna, o por día+cliente). Puedes correr la automatización tantas
+veces al día como quieras sobre el mismo Excel sin duplicar filas, y **respeta
+las filas que ya tengas escritas a mano**.
 
-- el **número de factura** si se detectó, o
-- `fecha + remitente + asunto` en su defecto.
+## Probar sin Mac / sin Mail.app
 
-Al reejecutar, los correos ya volcados se **omiten**, así que puedes correr la
-automatización a diario sobre el mismo Excel.
+Hay una fuente de prueba basada en JSON (la que usan los tests):
 
-## Automatizar la ejecución (opcional)
-
-Para correrla cada día en la Mac, crea un agente de `launchd` que lance
-`scripts/run.sh` a una hora fija (p. ej. con
-[`launchd`](https://www.launchd.info)) o programa un evento de *Calendar* /
-*Automator*. La deduplicación evita entradas repetidas.
+```bash
+python -m mail2excel run --source json --input tests/sample_emails.json --output "Tabla BLs.xlsx"
+```
 
 ## Pruebas
 
@@ -130,17 +131,30 @@ pytest -q
 
 ```
 mail2excel/
-  __main__.py     # CLI (python -m mail2excel run)
+  __main__.py     # CLI: run / summary
   config.py       # carga de config.yaml
-  mail_reader.py  # AppleScript (Mail.app) + fuente JSON de prueba
-  extractor.py    # extracción de campos y filtros
-  excel_writer.py # escritura/append a .xlsx con deduplicación
-  models.py       # EmailMessage / ExtractedRow
+  mail_reader.py  # AppleScript (Mail.app) + guardado de PDF + fuente JSON
+  pdf_reader.py   # extracción de texto de los PDF adjuntos
+  extractor.py    # clasificación: cliente, BL, ETD/ETA, referencia, notas
+  excel_writer.py # escritura/append a la tabla BLs con deduplicación
+  summary.py      # resumen diario + envío por Apple Mail
+  dates.py        # normalización de fechas a DD.MM.YY
+  models.py       # EmailMessage / BLRecord
 config.yaml
 requirements.txt
 tests/
-scripts/run.sh
+scripts/
+  run.sh
+  install-launchd.sh
+  uninstall-launchd.sh
 ```
+
+## Nota sobre la ejecución en la nube
+
+Esta automatización corre **en tu Mac** porque depende de Apple Mail y del Excel
+local. Si en el futuro quieres que corra sola en la nube (sin depender de que la
+Mac esté encendida), habría que cambiar a **Gmail API + Google Sheets**; la
+lógica de clasificación es la misma y se reutiliza.
 
 ## Licencia
 

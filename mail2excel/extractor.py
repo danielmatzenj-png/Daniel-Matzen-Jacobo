@@ -1,122 +1,141 @@
-"""Extracción de campos de facturas/pedidos a partir del texto del correo.
-
-Todo se controla desde config.yaml['fields']: cada campo declara una lista de
-expresiones regulares y, opcionalmente, un tipo ('amount', 'date', 'text') y un
-origen alternativo ('sender', 'sender_email', 'sender_domain', 'date').
-"""
+"""Clasificación de un correo (+ su PDF) en una fila de la tabla BLs."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
 
-from .models import EmailMessage, ExtractedRow
+from .dates import email_date_to, normalize_date
+from .models import BLRecord, EmailMessage
 
 
-def parse_amount(text: str) -> float | str:
-    """Convierte '1.234,56 €' o '$1,234.56' en un float. Devuelve '' si no puede."""
-    if text is None:
-        return ""
-    cleaned = re.sub(r"[^\d.,]", "", str(text)).strip()
-    if not cleaned:
-        return ""
-
-    has_dot = "." in cleaned
-    has_comma = "," in cleaned
-    if has_dot and has_comma:
-        # El separador decimal es el último signo que aparece.
-        if cleaned.rfind(",") > cleaned.rfind("."):
-            # Formato europeo: 1.234,56
-            cleaned = cleaned.replace(".", "").replace(",", ".")
-        else:
-            # Formato anglosajón: 1,234.56
-            cleaned = cleaned.replace(",", "")
-    elif has_comma:
-        # Solo coma: decide si es decimal (1234,56) o de miles (1,234)
-        if re.search(r",\d{3}$", cleaned) and cleaned.count(",") == 1 and len(cleaned.split(",")[0]) <= 3:
-            cleaned = cleaned.replace(",", ".")
-        else:
-            cleaned = cleaned.replace(",", ".")
-    # Solo punto -> ya es válido como decimal.
-
-    try:
-        return round(float(cleaned), 2)
-    except ValueError:
-        return ""
+def detect_customer(email: EmailMessage, customers: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Identifica al cliente según remitente/asunto/cuerpo."""
+    haystack = f"{email.sender}\n{email.searchable}".lower()
+    for cust in customers:
+        for needle in cust.get("match", []):
+            if str(needle).lower() in haystack:
+                return cust
+    return None
 
 
-def _source_value(email: EmailMessage, source: str) -> str:
-    return {
-        "sender": email.sender_name,
-        "sender_email": email.sender_email,
-        "sender_domain": email.sender_domain,
-        "date": email.date,
-        "subject": email.subject,
-    }.get(source, "")
+def extract_bl(text: str, bl_cfg: dict[str, Any]) -> str:
+    """Extrae el número de BL: primero por etiqueta, luego por prefijo de naviera."""
+    # 1) Etiqueta explícita: "BL Nr: HLCUSJ2260", "Bill of Lading HLCU..."
+    for label in bl_cfg.get("labels", []):
+        pattern = rf"{label}\s*[:#\-]?\s*([A-Z]{{2,4}}[A-Z0-9]{{5,14}}|\d{{6,14}})"
+        m = re.search(pattern, text, flags=re.IGNORECASE)
+        if m:
+            return m.group(1).strip().upper()
+
+    # 2) Prefijo de naviera (SCAC) seguido de dígitos/alfanumérico.
+    prefixes = bl_cfg.get("carrier_prefixes", [])
+    if prefixes:
+        min_len = int(bl_cfg.get("min_len", 6))
+        max_len = int(bl_cfg.get("max_len", 14))
+        alt = "|".join(re.escape(p) for p in prefixes)
+        pattern = rf"\b((?:{alt})[A-Z0-9]{{{min_len},{max_len}}})\b"
+        m = re.search(pattern, text, flags=re.IGNORECASE)
+        if m:
+            return m.group(1).strip().upper()
+
+    return ""
 
 
-def _extract_field(email: EmailMessage, spec: dict[str, Any]) -> Any:
+def extract_reference(
+    text: str,
+    customer: dict[str, Any] | None,
+    fallback_patterns: list[str],
+) -> str:
+    """Extrae el nº de referencia interno según el prefijo del cliente."""
+    patterns: list[str] = []
+    if customer and customer.get("reference_pattern"):
+        patterns.append(customer["reference_pattern"])
+    patterns.extend(fallback_patterns)
+
+    for pattern in patterns:
+        m = re.search(pattern, text, flags=re.IGNORECASE)
+        if m:
+            return re.sub(r"\s+", "", m.group(0).strip().upper())
+    return ""
+
+
+def _date_near_label(text: str, labels: list[str], fmt: str) -> str:
+    """Busca una fecha en la misma línea/tramo que sigue a alguna etiqueta."""
+    for label in labels:
+        # Captura hasta ~40 caracteres tras la etiqueta y busca una fecha ahí.
+        m = re.search(rf"{re.escape(label)}\s*[:#\-]?\s*(.{{0,40}})", text, flags=re.IGNORECASE)
+        if m:
+            found = normalize_date(m.group(1), fmt)
+            if found:
+                return found
+    return ""
+
+
+def classify(email: EmailMessage, cfg: dict[str, Any]) -> BLRecord:
+    """Convierte un correo en una fila lista para la tabla BLs."""
     text = email.searchable
-    field_type = str(spec.get("type", "text")).lower()
+    fmt = cfg.get("output", {}).get("date_format", "%d.%m.%y")
 
-    value: Any = ""
-    for pattern in spec.get("patterns", []) or []:
-        match = re.search(pattern, text, flags=re.IGNORECASE | re.MULTILINE)
-        if match:
-            value = match.group(1).strip() if match.groups() else match.group(0).strip()
-            break
+    customers = cfg.get("customers", [])
+    customer = detect_customer(email, customers)
+    customer_name = customer["name"] if customer else email.sender_name
 
-    # Origen alternativo cuando ninguna expresión coincide.
-    if not value and spec.get("from"):
-        value = _source_value(email, str(spec["from"]))
+    bl_nr = extract_bl(text, cfg.get("bl", {}))
+    reference = extract_reference(text, customer, cfg.get("reference_fallback_patterns", []))
 
-    if not value:
-        return ""
+    dates_cfg = cfg.get("dates", {})
+    etd = _date_near_label(text, dates_cfg.get("etd_labels", []), fmt)
+    eta = _date_near_label(text, dates_cfg.get("eta_labels", []), fmt)
 
-    if field_type == "amount":
-        return parse_amount(value)
-    if field_type == "date":
-        return str(value).strip()
-    return str(value).strip()
+    # Notas: registra anomalías.
+    notes: list[str] = []
+    if not bl_nr:
+        notes.append("no hay BL")
+    if not reference:
+        notes.append("falta referencia interna")
+    if not customer:
+        notes.append("cliente no reconocido")
 
-
-def extract_row(email: EmailMessage, fields: dict[str, Any]) -> ExtractedRow:
-    """Aplica todos los campos configurados a un correo."""
-    extracted: dict[str, Any] = {}
-    for name, spec in fields.items():
-        spec = spec or {}
-        extracted[name] = _extract_field(email, spec)
-    return ExtractedRow(email=email, fields=extracted)
+    values = {
+        "status": cfg.get("status_value", "PEND"),
+        "day": email_date_to(fmt, email.date),
+        "customer": customer_name,
+        "bl_nr": bl_nr,
+        "etd": etd,
+        "eta": eta,
+        "pcd": "",                       # siempre vacío por indicación
+        "internal_reference": reference,
+        "notes": "; ".join(notes),
+    }
+    return BLRecord(email=email, values=values)
 
 
 def passes_filters(email: EmailMessage, filters: dict[str, Any]) -> bool:
-    """Filtra correos por remitente, asunto y rango de fechas (config['filters'])."""
+    """Filtro opcional por remitente, asunto, cuerpo y rango de fechas."""
     if not filters:
         return True
 
     sender_contains = filters.get("sender_contains")
-    if sender_contains:
-        if str(sender_contains).lower() not in email.sender.lower():
-            return False
+    if sender_contains and str(sender_contains).lower() not in email.sender.lower():
+        return False
 
     subject_contains = filters.get("subject_contains")
     if subject_contains:
         needles = subject_contains if isinstance(subject_contains, list) else [subject_contains]
-        haystack = email.subject.lower()
-        if not any(str(n).lower() in haystack for n in needles):
+        if not any(str(n).lower() in email.subject.lower() for n in needles):
             return False
 
-    require_terms = filters.get("body_contains")
-    if require_terms:
-        needles = require_terms if isinstance(require_terms, list) else [require_terms]
-        haystack = email.searchable.lower()
-        if not any(str(n).lower() in haystack for n in needles):
+    body_contains = filters.get("body_contains")
+    if body_contains:
+        needles = body_contains if isinstance(body_contains, list) else [body_contains]
+        if not any(str(n).lower() in email.searchable.lower() for n in needles):
             return False
 
     date_from = filters.get("date_from")
     date_to = filters.get("date_to")
     if (date_from or date_to) and email.date:
-        day = email.date[:10]  # "YYYY-MM-DD"
+        day = email.date[:10]
         if date_from and day < str(date_from):
             return False
         if date_to and day > str(date_to):
@@ -125,14 +144,7 @@ def passes_filters(email: EmailMessage, filters: dict[str, Any]) -> bool:
     return True
 
 
-def extract_all(
-    emails: list[EmailMessage],
-    fields: dict[str, Any],
-    filters: dict[str, Any] | None = None,
-) -> list[ExtractedRow]:
-    """Filtra y extrae todos los correos que cumplan los filtros."""
-    rows: list[ExtractedRow] = []
-    for email in emails:
-        if passes_filters(email, filters or {}):
-            rows.append(extract_row(email, fields))
-    return rows
+def classify_all(emails: list[EmailMessage], cfg: dict[str, Any]) -> list[BLRecord]:
+    """Filtra y clasifica todos los correos."""
+    filters = cfg.get("filters", {})
+    return [classify(e, cfg) for e in emails if passes_filters(e, filters)]

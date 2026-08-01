@@ -1,82 +1,120 @@
 # Configuración de mail2excel
-# Automatización: Apple Mail (Mail.app) -> Excel de facturas/pedidos.
+# Flujo: Apple Mail (Mail.app) -> revisar correo + PDF adjunto -> Tabla BLs.xlsx
+#        y, al final del día, resumen por correo.
 
 # --- De dónde se leen los correos ---
 source:
   type: "applescript"      # "applescript" (Apple Mail en macOS) o "json" (pruebas)
   account: ""              # Nombre EXACTO de la cuenta en Mail.app. Vacío = buzón unificado.
   mailbox: "inbox"         # Buzón. "inbox" = bandeja de entrada unificada.
-  only_unread: false       # true = procesar solo correos no leídos.
+  only_unread: true        # true = procesar solo correos no leídos (recomendado para runs repetidos).
   max_messages: 200        # Máximo de correos a leer por ejecución.
+  save_attachments: true   # Guardar y leer los PDF adjuntos.
 
-# --- Qué correos nos interesan (se aplican en Python) ---
+# --- Qué correos se procesan (filtro opcional en Python) ---
 filters:
-  # Solo correos cuyo remitente contenga alguno de estos textos (opcional).
-  sender_contains: ""
-  # Solo correos cuyo asunto contenga alguna de estas palabras (lista o texto).
-  subject_contains:
-    - "factura"
-    - "invoice"
-    - "pedido"
-    - "recibo"
-    - "comprobante"
-  # Solo si el cuerpo/asunto contiene alguno de estos términos (opcional).
+  sender_contains: ""      # Solo remitentes que contengan este texto (vacío = todos).
+  subject_contains: ""     # Solo asuntos que contengan alguna palabra (lista o vacío = todos).
   body_contains: ""
-  # Rango de fechas "YYYY-MM-DD" (opcional).
-  date_from: ""
+  date_from: ""            # "YYYY-MM-DD"
   date_to: ""
 
-# --- Salida Excel ---
+# --- Salida: la tabla BLs ---
 output:
-  path: "~/Documents/facturas.xlsx"
-  sheet: "Facturas"
+  path: "~/Downloads/Tabla BLs.xlsx"
+  sheet: "Sheet1"
+  # Cabeceras EXACTAS tal como están en el Excel (orden de columnas A..I).
+  headers:
+    - "Status"
+    - "Day"
+    - "Customer"
+    - "BL Nr"
+    - "ETD"
+    - "ETA"
+    - "PCD"
+    - "Internal Reference Nr"
+    - "Notes"
+  # Formato de fecha usado en las columnas Day / ETD / ETA.
+  date_format: "%d.%m.%y"       # -> 28.07.26
 
-# --- Campos a extraer (una columna por campo, en este orden) ---
-# Cada campo admite:
-#   type:     text (por defecto) | amount | date
-#   from:     origen alternativo si ninguna expresión coincide
-#             (sender | sender_email | sender_domain | date | subject)
-#   patterns: lista de expresiones regulares; se usa el grupo 1 del primer match.
-fields:
-  proveedor:
-    from: "sender"
-    patterns:
-      - 'proveedor\s*[:\-]\s*(.+)'
-      - 'emitid[oa] por\s*[:\-]?\s*(.+)'
+# --- Valor fijo de la columna Status ---
+status_value: "PEND"
 
-  numero_factura:
-    patterns:
-      - '(?:factura|invoice)\s*(?:n[ºo°\.]*|number|no\.?|#)?\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,})'
-      - 'n[ºo°]\s*de\s*factura\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,})'
+# --- Clientes: cómo reconocer al remitente y su prefijo de nº de pedido interno ---
+# 'match' se busca en remitente, asunto y cuerpo (sin distinguir mayúsculas).
+# 'reference_pattern' captura el nº de referencia interno de ESE cliente.
+customers:
+  - name: "La Minita"
+    match: ["la minita", "laminita"]
+    reference_pattern: 'GF\s?\d{4,6}(?:[-/]\d{1,4})?'
+  - name: "PCT LLC"
+    match: ["pct llc", "pct "]
+    reference_pattern: 'P5\d{3,5}'
+  - name: "TCS LLC"
+    match: ["tcs llc", "tcs "]
+    reference_pattern: 'P-?\s?\d{3,6}'
+  - name: "Cafe Capris"
+    match: ["cafe capris", "café capris", "capris"]
+    reference_pattern: 'S\d{4,6}'
 
-  numero_pedido:
-    patterns:
-      - '(?:pedido|orden|order)\s*(?:n[ºo°\.]*|no\.?|#)?\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,})'
+# Si no se reconoce al cliente, se prueban todos estos prefijos como último recurso.
+reference_fallback_patterns:
+  - 'GF\s?\d{4,6}'
+  - 'P5\d{3,5}'
+  - 'P-?\s?\d{3,6}'
+  - 'S\d{4,6}'
 
-  fecha_factura:
-    type: "date"
-    patterns:
-      - '(?:fecha(?:\s*de\s*(?:factura|emisi[oó]n))?|date)\s*[:#\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})'
-      - '(\d{4}-\d{2}-\d{2})'
+# --- Número de BL (Bill of Lading) ---
+bl:
+  # Etiquetas que suelen preceder al número de BL en el texto.
+  labels:
+    - 'b\s*/?\s*l\s*(?:nr|no|number|#|:)'
+    - 'bill of lading'
+    - 'master bl'
+    - 'mbl'
+    - 'hbl'
+    - 'documento de embarque'
+  # Prefijos de navieras (SCAC) para reconocer el BL aunque no lleve etiqueta.
+  carrier_prefixes:
+    - HLCU   # Hapag-Lloyd
+    - MEDU   # MSC
+    - MAEU   # Maersk
+    - MSCU
+    - ONEY   # Ocean Network Express
+    - CMDU   # CMA CGM
+    - COSU   # COSCO
+    - OOLU   # OOCL
+    - EGLV   # Evergreen
+    - YMLU   # Yang Ming
+    - HDMU   # HMM
+    - SUDU   # Hamburg Süd
+  # Longitud (letras+dígitos) del cuerpo tras el prefijo de naviera.
+  min_len: 6
+  max_len: 14
 
-  base_imponible:
-    type: "amount"
-    patterns:
-      - '(?:base\s*imponible|subtotal)\D{0,12}([\d.,]+)'
+# --- ETD / ETA: etiquetas que preceden a la fecha en el correo/PDF ---
+dates:
+  etd_labels:
+    - "etd"
+    - "estimated time of departure"
+    - "estimated departure"
+    - "fecha de embarque"
+    - "fecha estimada de embarque"
+    - "salida"
+    - "sailing"
+  eta_labels:
+    - "eta"
+    - "estimated time of arrival"
+    - "estimated arrival"
+    - "fecha de arribo"
+    - "fecha estimada de arribo"
+    - "fecha de desembarque"
+    - "llegada"
+    - "arrival"
 
-  iva:
-    type: "amount"
-    patterns:
-      # Salta un porcentaje entre paréntesis, p. ej. "IVA (21%): 252,00".
-      - '(?:i\.?v\.?a\.?|impuesto|tax|vat)\s*(?:\(\s*\d+\s*%\s*\))?\D{0,8}([\d.,]+)'
-
-  total:
-    type: "amount"
-    patterns:
-      - '(?:total\s*a\s*pagar|importe\s*total|total\s*due|amount\s*due)\D{0,12}([\d.,]+)'
-      # 'total' como palabra suelta (evita capturar "subtotal").
-      - '\btotal\b\D{0,12}([\d.,]+)'
-
-  moneda:
-    patterns:
-      - '(EUR|USD|MXN|GBP|€|\$)'
+# --- Resumen diario por correo ---
+summary:
+  to: "sebasmatzen@gmail.com"
+  subject_prefix: "Resumen diario BLs"
+  # Enviar por Apple Mail (macOS). Fuera de macOS solo se imprime/guarda.
+  send_via: "applescript"
