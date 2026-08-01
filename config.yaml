@@ -1,53 +1,82 @@
-# Configuración del asistente Jarvis local
+# Configuración de mail2excel
+# Automatización: Apple Mail (Mail.app) -> Excel de facturas/pedidos.
 
-wake_word:
-  # Modelo preentrenado de openwakeword. "hey_jarvis" es el más cercano a "Jarvis".
-  # Si quieres una palabra distinta, entrena tu propio modelo y colócalo en models/
-  model: "hey_jarvis"
-  # Umbral de activación (0.0 - 1.0). Más alto = menos falsos positivos.
-  threshold: 0.5
-  # Frecuencia de muestreo del micrófono (openwakeword requiere 16 kHz).
-  sample_rate: 16000
-  # Tamaño de bloque de audio (80 ms a 16 kHz).
-  frame_length: 1280
+# --- De dónde se leen los correos ---
+source:
+  type: "applescript"      # "applescript" (Apple Mail en macOS) o "json" (pruebas)
+  account: ""              # Nombre EXACTO de la cuenta en Mail.app. Vacío = buzón unificado.
+  mailbox: "inbox"         # Buzón. "inbox" = bandeja de entrada unificada.
+  only_unread: false       # true = procesar solo correos no leídos.
+  max_messages: 200        # Máximo de correos a leer por ejecución.
 
-stt:
-  # Modelo Whisper: tiny, base, small, medium, large-v3
-  model: "base"
-  # "cpu", "cuda" o "auto"
-  device: "auto"
-  # "int8" es rápido en CPU; "float16" en GPU
-  compute_type: "int8"
-  language: "es"
-  # Segundos de silencio para terminar la grabación
-  silence_duration: 1.2
-  # Umbral de energía para detectar silencio
-  silence_threshold: 0.01
-  # Duración máxima de una petición en segundos
-  max_record_seconds: 30
+# --- Qué correos nos interesan (se aplican en Python) ---
+filters:
+  # Solo correos cuyo remitente contenga alguno de estos textos (opcional).
+  sender_contains: ""
+  # Solo correos cuyo asunto contenga alguna de estas palabras (lista o texto).
+  subject_contains:
+    - "factura"
+    - "invoice"
+    - "pedido"
+    - "recibo"
+    - "comprobante"
+  # Solo si el cuerpo/asunto contiene alguno de estos términos (opcional).
+  body_contains: ""
+  # Rango de fechas "YYYY-MM-DD" (opcional).
+  date_from: ""
+  date_to: ""
 
-tts:
-  rate: 180
-  volume: 1.0
-  # Nombre parcial de la voz (ej. "spanish", "mexican"). Deja vacío para usar la predeterminada.
-  voice: "spanish"
+# --- Salida Excel ---
+output:
+  path: "~/Documents/facturas.xlsx"
+  sheet: "Facturas"
 
-llm:
-  # URL del servidor Ollama local
-  host: "http://localhost:11434"
-  # Modelo Ollama a usar. Recomendado: llama3.1, qwen2.5, mistral-nemo
-  model: "llama3.1"
-  temperature: 0.2
-  num_ctx: 8192
+# --- Campos a extraer (una columna por campo, en este orden) ---
+# Cada campo admite:
+#   type:     text (por defecto) | amount | date
+#   from:     origen alternativo si ninguna expresión coincide
+#             (sender | sender_email | sender_domain | date | subject)
+#   patterns: lista de expresiones regulares; se usa el grupo 1 del primer match.
+fields:
+  proveedor:
+    from: "sender"
+    patterns:
+      - 'proveedor\s*[:\-]\s*(.+)'
+      - 'emitid[oa] por\s*[:\-]?\s*(.+)'
 
-agent:
-  # Idioma del asistente
-  language: "es"
-  # Nombre del asistente
-  name: "Jarvis"
-  # Pedir confirmación antes de ejecutar comandos peligrosos (rm, formatear, etc.)
-  confirm_dangerous: true
-  # Máximo número de iteraciones herramienta->LLM por petición
-  max_iterations: 8
-  # Directorio raíz para operaciones de archivos. "~" = home.
-  workspace_root: "~"
+  numero_factura:
+    patterns:
+      - '(?:factura|invoice)\s*(?:n[ºo°\.]*|number|no\.?|#)?\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,})'
+      - 'n[ºo°]\s*de\s*factura\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,})'
+
+  numero_pedido:
+    patterns:
+      - '(?:pedido|orden|order)\s*(?:n[ºo°\.]*|no\.?|#)?\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,})'
+
+  fecha_factura:
+    type: "date"
+    patterns:
+      - '(?:fecha(?:\s*de\s*(?:factura|emisi[oó]n))?|date)\s*[:#\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})'
+      - '(\d{4}-\d{2}-\d{2})'
+
+  base_imponible:
+    type: "amount"
+    patterns:
+      - '(?:base\s*imponible|subtotal)\D{0,12}([\d.,]+)'
+
+  iva:
+    type: "amount"
+    patterns:
+      # Salta un porcentaje entre paréntesis, p. ej. "IVA (21%): 252,00".
+      - '(?:i\.?v\.?a\.?|impuesto|tax|vat)\s*(?:\(\s*\d+\s*%\s*\))?\D{0,8}([\d.,]+)'
+
+  total:
+    type: "amount"
+    patterns:
+      - '(?:total\s*a\s*pagar|importe\s*total|total\s*due|amount\s*due)\D{0,12}([\d.,]+)'
+      # 'total' como palabra suelta (evita capturar "subtotal").
+      - '\btotal\b\D{0,12}([\d.,]+)'
+
+  moneda:
+    patterns:
+      - '(EUR|USD|MXN|GBP|€|\$)'

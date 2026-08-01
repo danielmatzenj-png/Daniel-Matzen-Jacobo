@@ -1,0 +1,26 @@
+[
+  {
+    "date": "2026-07-15 09:32:10",
+    "sender": "Proveedor Norte SA <facturacion@proveedornorte.com>",
+    "subject": "Factura Nº F-2026-0481 - Julio",
+    "body": "Estimado cliente,\n\nAdjuntamos su factura.\n\nProveedor: Proveedor Norte SA\nNº de factura: F-2026-0481\nFecha de emisión: 15/07/2026\nBase imponible: 1.200,00\nIVA (21%): 252,00\nTotal a pagar: 1.452,00 EUR\n\nGracias por su confianza."
+  },
+  {
+    "date": "2026-07-18 14:05:00",
+    "sender": "Amazon <auto-confirm@amazon.com>",
+    "subject": "Tu pedido 112-3456789-1011121 ha sido enviado",
+    "body": "Hola,\n\nGracias por tu compra.\nPedido: 112-3456789-1011121\nfecha 18/07/2026\nTotal: $89.99 USD\n\nSaludos."
+  },
+  {
+    "date": "2026-07-20 11:11:11",
+    "sender": "Boletines Marketing <news@promos.example>",
+    "subject": "¡Ofertas de verano imperdibles!",
+    "body": "Descuentos de hasta el 50%. Nada de facturas aquí, solo promociones."
+  },
+  {
+    "date": "2026-07-22 08:00:00",
+    "sender": "Servicios Cloud <billing@cloudservices.io>",
+    "subject": "Invoice INV-99812 for your subscription",
+    "body": "Hello,\n\nInvoice number: INV-99812\nDate: 2026-07-22\nSubtotal: 40.00\nTax: 8.40\nTotal due: 48.40 USD\n\nThank you."
+  }
+]

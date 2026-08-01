@@ -8,10 +8,11 @@ env/
 *.egg-info/
 build/
 dist/
+.pytest_cache/
 .DS_Store
 Thumbs.db
-models/
-*.onnx
-*.bin
 .idea/
 .vscode/
+
+# Salidas de la automatización
+*.xlsx

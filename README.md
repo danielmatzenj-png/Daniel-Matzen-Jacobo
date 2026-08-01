@@ -1,138 +1,146 @@
-# Jarvis — Asistente de IA local
+# mail2excel — Apple Mail → Excel de facturas/pedidos
 
-Asistente de IA **100% local** que se activa con la palabra clave **"Jarvis"**
-y puede ejecutar acciones en tu computadora: leer y escribir archivos, lanzar
-comandos de shell, abrir aplicaciones y URLs, consultar el estado del sistema,
-buscar en la web, usar el portapapeles, etc.
+Automatización que lee tus correos de **Apple Mail (Mail.app)** en la Mac,
+extrae los datos de **facturas y pedidos** (proveedor, nº de factura, nº de
+pedido, fecha, base imponible, IVA, total, moneda…) y los vuelca a un archivo
+**Excel (.xlsx)**. Se puede ejecutar cuantas veces quieras: no duplica filas.
 
-Nada de tu voz ni tus datos sale de tu equipo: la detección de palabra clave,
-la transcripción y el LLM corren localmente.
+Todo corre **localmente** en tu Mac vía AppleScript; no usa claves ni APIs
+externas.
 
-## Arquitectura
+## Cómo funciona
 
 ```
-micrófono
-   │
-   ▼
-openwakeword  ── escucha continua de "Jarvis"
-   │ (activación)
-   ▼
-faster-whisper  ── transcribe tu petición al cerrarse el silencio
-   │
-   ▼
-Agent ──► Ollama (LLM local, function calling)
-   │          │
-   │          └── invoca herramientas Python (archivos, shell, apps, web...)
-   ▼
-pyttsx3  ── lee la respuesta en voz alta
+Apple Mail (Mail.app)
+        │  AppleScript (osascript)
+        ▼
+  mail_reader ──► lista de correos (fecha, remitente, asunto, cuerpo)
+        │
+        ▼
+   extractor  ──► aplica las expresiones de config.yaml a cada correo
+        │           (proveedor, nº factura, total, IVA, …)
+        ▼
+ excel_writer ──► escribe/actualiza facturas.xlsx (sin duplicar)
 ```
 
 ## Requisitos
 
-- Python 3.10+
-- Un LLM local servido por [Ollama](https://ollama.com) (recomendado
-  `llama3.1`, `qwen2.5` o `mistral-nemo`; deben soportar *tools*).
-- Micrófono y altavoz.
-- Linux: `portaudio19-dev espeak ffmpeg xclip xdg-utils` (para audio, TTS,
-  portapapeles y abrir aplicaciones).
-- macOS: `brew install portaudio ffmpeg`.
-- Windows: todo llega con las dependencias de pip (SAPI5 incluido).
+- macOS con la app **Mail** configurada con tus cuentas.
+- **Python 3.10+**.
+- Permiso de **Automatización** para que tu terminal controle Mail
+  (la primera ejecución lo pedirá; si no, actívalo en *Ajustes del Sistema ›
+  Privacidad y seguridad › Automatización*).
 
-## Instalación rápida
+## Instalación
 
 ```bash
-# Linux / macOS
-./scripts/install.sh
-
-# Windows (PowerShell)
-.\scripts\install.ps1
-```
-
-Instala también Ollama y descarga un modelo con soporte de herramientas:
-
-```bash
-ollama pull llama3.1
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ## Uso
 
-```bash
-source .venv/bin/activate        # Windows: .\.venv\Scripts\Activate.ps1
-python -m jarvis.main
-```
-
-Di "Jarvis". Cuando oigas la confirmación, pide lo que quieras. Ejemplos:
-
-- "Jarvis, ¿cuánta memoria está usando mi equipo?"
-- "Jarvis, lista los archivos de Documentos y dime cuál es el más grande."
-- "Jarvis, abre Visual Studio Code."
-- "Jarvis, crea un archivo notas.txt en el escritorio con mi lista de compras."
-- "Jarvis, busca 'recetas de paella' en la web."
-
-### Modo texto (para probar sin micrófono)
+1. Edita `config.yaml` (buzón, filtros, campos y ruta del Excel).
+2. Ejecuta:
 
 ```bash
-python -m jarvis.main --text
+python -m mail2excel run
+# o bien:
+./scripts/run.sh
 ```
 
-## Configuración
+Verás algo como:
 
-Edita `config.yaml` para cambiar:
-
-- **Modelo LLM** (`llm.model`): cualquier modelo con *tool calling* en Ollama.
-- **Modelo Whisper** (`stt.model`): `tiny`, `base`, `small`, `medium`, `large-v3`.
-- **Umbral de la palabra clave** (`wake_word.threshold`).
-- **Directorio raíz** para operaciones de archivos (`agent.workspace_root`).
-- **Confirmación** para operaciones destructivas (`agent.confirm_dangerous`).
-
-## Herramientas disponibles para el agente
-
-| Herramienta       | Qué hace                                                   | Peligrosa |
-|-------------------|------------------------------------------------------------|:---------:|
-| `list_files`      | Lista contenidos de un directorio                          |           |
-| `read_file`       | Lee un archivo de texto                                    |           |
-| `write_file`      | Crea o sobrescribe un archivo                              | ✓         |
-| `delete_path`     | Elimina archivo o carpeta                                  | ✓         |
-| `search_files`    | Busca por patrón glob recursivamente                       |           |
-| `run_shell`       | Ejecuta un comando en la shell                             | ✓         |
-| `open_app`        | Abre una aplicación o archivo                              |           |
-| `list_processes`  | Lista procesos activos                                     |           |
-| `kill_process`    | Termina un proceso por PID                                 | ✓         |
-| `system_info`     | Info de CPU, RAM, disco, SO                                |           |
-| `now`             | Fecha y hora actual                                        |           |
-| `open_url`        | Abre una URL en el navegador                               |           |
-| `web_search`      | Búsqueda web (DuckDuckGo)                                  |           |
-| `clipboard_read`  | Lee el portapapeles                                        |           |
-| `clipboard_write` | Escribe al portapapeles                                    |           |
-
-Las herramientas marcadas como peligrosas piden confirmación por consola antes
-de ejecutarse si `agent.confirm_dangerous: true` (valor por defecto).
-
-## Añadir tus propias herramientas
-
-Edita `jarvis/tools.py` y registra una nueva `Tool` con su esquema JSON:
-
-```python
-self.register(Tool(
-    name="mi_herramienta",
-    description="Qué hace",
-    parameters={
-        "type": "object",
-        "properties": {"x": {"type": "string"}},
-        "required": ["x"],
-    },
-    func=self._mi_impl,
-))
+```
+› Leyendo correos (fuente: applescript)…
+  200 correo(s) leído(s).
+  12 correo(s) tras aplicar filtros.
+✓ Excel actualizado: ~/Documents/facturas.xlsx
+  Filas nuevas: 12 · omitidas (duplicadas): 0 · total en hoja: 12
 ```
 
-El LLM la verá automáticamente en la siguiente petición.
+### Ver qué haría, sin escribir
 
-## Seguridad
+```bash
+python -m mail2excel run --dry-run
+```
 
-El asistente tiene acceso amplio a tu sistema; trátalo como trataría cualquier
-script que ejecuta comandos de shell: revisa `agent.workspace_root` y mantén
-`confirm_dangerous: true` a menos que sepas lo que haces. Todas las operaciones
-peligrosas pasan por un diálogo de confirmación explícito.
+### Probar sin Mac / sin Mail.app
+
+Hay una fuente de prueba basada en JSON (la misma que usan los tests):
+
+```bash
+python -m mail2excel run --source json --input tests/sample_emails.json --output salida.xlsx
+```
+
+## Configuración (`config.yaml`)
+
+- **`source`** — cuenta y buzón de Mail.app, si procesar solo no leídos y el
+  máximo de correos por ejecución.
+- **`filters`** — qué correos entran: por remitente, por palabras en el asunto
+  (por defecto: *factura, invoice, pedido, recibo, comprobante*), por texto del
+  cuerpo y por rango de fechas.
+- **`output`** — ruta y nombre de la hoja del Excel.
+- **`fields`** — **una columna por campo**. Cada campo define:
+  - `type`: `text` (por defecto), `amount` (normaliza importes `1.234,56` / `$1,234.56`) o `date`.
+  - `from`: origen alternativo si ninguna expresión coincide (`sender`, `sender_email`, `sender_domain`, `date`, `subject`).
+  - `patterns`: lista de expresiones regulares; se toma el **grupo 1** del primer match.
+
+### Añadir o cambiar un campo
+
+Por ejemplo, para capturar un CIF/NIF del proveedor, añade en `fields`:
+
+```yaml
+  cif:
+    patterns:
+      - '(?:cif|nif)\s*[:\-]?\s*([A-Z0-9]{8,10})'
+```
+
+La próxima ejecución creará esa columna automáticamente.
+
+> Nota: si cambias las columnas, empieza con un Excel nuevo (u otra ruta), ya
+> que la deduplicación compara la estructura de columnas del archivo existente.
+
+## Deduplicación
+
+Cada fila lleva una clave oculta:
+
+- el **número de factura** si se detectó, o
+- `fecha + remitente + asunto` en su defecto.
+
+Al reejecutar, los correos ya volcados se **omiten**, así que puedes correr la
+automatización a diario sobre el mismo Excel.
+
+## Automatizar la ejecución (opcional)
+
+Para correrla cada día en la Mac, crea un agente de `launchd` que lance
+`scripts/run.sh` a una hora fija (p. ej. con
+[`launchd`](https://www.launchd.info)) o programa un evento de *Calendar* /
+*Automator*. La deduplicación evita entradas repetidas.
+
+## Pruebas
+
+```bash
+pip install pytest
+pytest -q
+```
+
+## Estructura
+
+```
+mail2excel/
+  __main__.py     # CLI (python -m mail2excel run)
+  config.py       # carga de config.yaml
+  mail_reader.py  # AppleScript (Mail.app) + fuente JSON de prueba
+  extractor.py    # extracción de campos y filtros
+  excel_writer.py # escritura/append a .xlsx con deduplicación
+  models.py       # EmailMessage / ExtractedRow
+config.yaml
+requirements.txt
+tests/
+scripts/run.sh
+```
 
 ## Licencia
 
