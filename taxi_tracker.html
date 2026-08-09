@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Rastreador de Billetera — Taxi Sevilla</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+    :root{
+      --red:#e74c3c; --red-d:#c0392b;
+      --blue:#3498db; --green:#27ae60; --orange:#f39c12;
+      --purple:#9b59b6; --teal:#1abc9c; --yellow:#FFD700;
+      --bg0:#0d1b2a; --bg1:#1b2838; --bg2:#243447; --bg3:#2c3e50;
+      --txt:#ecf0f1; --txt2:#95a5a6; --border:#34495e;
+    }
+
+    body{
+      font-family:'Segoe UI',system-ui,sans-serif;
+      background:var(--bg0);color:var(--txt);
+      height:100dvh;display:flex;flex-direction:column;overflow:hidden;
+    }
+
+    /* ── HEADER ─────────────────────────────── */
+    #hdr{
+      background:linear-gradient(135deg,var(--red),var(--red-d));
+      height:54px;padding:0 18px;flex-shrink:0;
+      display:flex;align-items:center;justify-content:space-between;
+      box-shadow:0 3px 14px rgba(231,76,60,.45);z-index:900;
+    }
+    #hdr .L{display:flex;align-items:center;gap:11px}
+    #hdr h1{font-size:15px;font-weight:700;line-height:1.25}
+    #hdr .sub{font-size:10px;opacity:.8}
+    .pulse{width:9px;height:9px;background:#fff;border-radius:50%;
+           animation:pulse 1.6s ease-in-out infinite;flex-shrink:0}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+    .badge{background:rgba(0,0,0,.28);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+
+    /* ── LAYOUT ──────────────────────────────── */
+    #main{display:flex;flex:1;overflow:hidden}
+
+    /* ── SIDEBAR ─────────────────────────────── */
+    #sb{width:400px;flex-shrink:0;background:var(--bg1);
+        border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+    #sb-body{flex:1;overflow-y:auto}
+    #sb-body::-webkit-scrollbar{width:5px}
+    #sb-body::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+
+    /* ── TABS ─────────────────────────────────── */
+    .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+    .tb{flex:1;padding:9px 4px;border:none;background:none;color:var(--txt2);
+        font-size:11px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;
+        transition:all .2s;display:flex;align-items:center;justify-content:center;gap:4px}
+    .tb.on{color:var(--red);border-bottom-color:var(--red)}
+    .pane{display:none}.pane.on{display:block}
+
+    /* ── STATUS BAR ──────────────────────────── */
+    #sbar{background:var(--bg2);padding:7px 13px;font-size:11px;color:var(--orange);
+          display:flex;gap:7px;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0}
+
+    /* ── SECTIONS ─────────────────────────────── */
+    .sec{padding:13px;border-bottom:1px solid var(--border)}
+    .stitle{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;
+            text-transform:uppercase;letter-spacing:.9px;color:var(--txt2);margin-bottom:10px}
+
+    /* ── FORM ─────────────────────────────────── */
+    label{display:block;font-size:11px;color:var(--txt2);margin-bottom:3px;margin-top:9px}
+    label:first-child{margin-top:0}
+    input[type=text],input[type=datetime-local],input[type=date],
+    input[type=time],select,textarea{
+      width:100%;background:var(--bg0);border:1px solid var(--border);
+      color:var(--txt);padding:7px 10px;border-radius:5px;font-size:12px;
+      transition:border-color .2s
+    }
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red)}
+    textarea{resize:vertical;min-height:70px;font-family:'Segoe UI',monospace}
+
+    /* ── BUTTONS ──────────────────────────────── */
+    .btn{display:flex;align-items:center;justify-content:center;gap:7px;
+         width:100%;padding:9px 14px;border:none;border-radius:5px;
+         font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:7px}
+    .btn-red{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff}
+    .btn-red:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(231,76,60,.4)}
+    .btn-ghost{background:var(--bg2);color:var(--txt);border:1px solid var(--border)}
+    .btn-ghost:hover{border-color:var(--red)}
+    .btn-blue{background:linear-gradient(135deg,#2980b9,var(--blue));color:#fff}
+    .btn-green{background:linear-gradient(135deg,#1e8449,var(--green));color:#fff}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+    .row{display:flex;gap:6px}.row input{flex:1}
+    .row .btn{width:auto;margin:0;padding:7px 11px}
+
+    /* ── PING CARD ────────────────────────────── */
+    .ping-card{
+      position:relative;background:var(--bg0);border:1px solid var(--border);
+      border-radius:7px;padding:10px 10px 10px 46px;margin-top:6px;
+      transition:border-color .2s;
+    }
+    .ping-card:hover{border-color:var(--blue)}
+    .ping-card.geocoding{border-color:var(--orange);animation:blink .8s ease-in-out infinite alternate}
+    .ping-card.done{border-left:3px solid var(--blue)}
+    .ping-card.last-ping{border-left:3px solid var(--red)}
+    @keyframes blink{from{opacity:1}to{opacity:.6}}
+
+    .ping-num{
+      position:absolute;left:10px;top:50%;transform:translateY(-50%);
+      width:26px;height:26px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:800;color:#000;flex-shrink:0;
+    }
+    .ping-time-lbl{font-size:13px;font-weight:700;color:var(--txt)}
+    .ping-addr-lbl{font-size:11px;color:var(--txt2);margin-top:1px;
+                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+    .ping-coords{font-size:10px;color:var(--green);font-family:monospace;margin-top:2px}
+    .ping-seg{font-size:10px;color:var(--txt2);margin-top:3px}
+    .ping-del{position:absolute;right:8px;top:8px;
+              background:none;border:none;color:var(--border);cursor:pointer;font-size:13px;padding:2px}
+    .ping-del:hover{color:var(--red)}
+    .spd-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;margin-left:4px}
+    .spd-slow{background:rgba(52,152,219,.2);color:var(--blue)}
+    .spd-ok{background:rgba(39,174,96,.2);color:var(--green)}
+    .spd-fast{background:rgba(243,156,18,.2);color:var(--orange)}
+    .spd-hwy{background:rgba(231,76,60,.2);color:var(--red)}
+
+    /* ── PROGRESS BAR ─────────────────────────── */
+    #geo-progress{display:none;margin-top:8px}
+    .prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+    .prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));
+               border-radius:3px;transition:width .3s}
+    .prog-lbl{font-size:10px;color:var(--txt2);margin-top:3px}
+
+    /* ── RESULT CARDS ─────────────────────────── */
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+    .card{background:var(--bg0);border:1px solid var(--border);border-radius:7px;padding:11px;text-align:center}
+    .card .val{font-size:22px;font-weight:800;color:var(--red)}
+    .card .unit{font-size:10px;color:var(--txt2)}
+    .card .lbl{font-size:10px;color:var(--txt2);margin-top:2px}
+
+    /* ── STAND LIST ───────────────────────────── */
+    .stand{display:flex;align-items:center;gap:9px;padding:8px;background:var(--bg0);
+           border:1px solid var(--border);border-radius:5px;margin-top:5px;
+           font-size:11px;cursor:pointer;transition:border-color .2s}
+    .stand:hover{border-color:var(--yellow)}
+    .snum{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+          justify-content:center;font-size:11px;font-weight:800;color:#000;flex-shrink:0}
+    .pbar{height:3px;background:var(--border);border-radius:2px;margin-top:3px;overflow:hidden}
+    .pfill{height:100%;border-radius:2px;transition:width .6s}
+
+    /* ── COMPANY CARD ─────────────────────────── */
+    .co{background:var(--bg0);border:1px solid var(--border);border-left:3px solid var(--red);
+        border-radius:6px;padding:12px;margin-top:8px}
+    .co-name{font-weight:700;font-size:13px}
+    .co-ph{font-size:21px;font-weight:800;color:var(--yellow);margin:3px 0}
+    .co-det{font-size:11px;color:var(--txt2);line-height:1.6}
+    .cpbtn{margin-top:6px;padding:4px 10px;background:none;border:1px solid var(--border);
+           color:var(--txt2);border-radius:4px;font-size:11px;cursor:pointer;transition:all .2s}
+    .cpbtn:hover{border-color:var(--red);color:var(--red)}
+
+    /* ── ALERTS ───────────────────────────────── */
+    .alert{padding:8px 11px;border-radius:5px;font-size:11px;
+           display:flex;gap:7px;align-items:flex-start;margin-top:8px;line-height:1.5}
+    .aw{background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:var(--orange)}
+    .ai{background:rgba(52,152,219,.12);border:1px solid rgba(52,152,219,.3);color:var(--blue)}
+    .ag{background:rgba(39,174,96,.12);border:1px solid rgba(39,174,96,.3);color:var(--green)}
+
+    /* ── SCRIPT BOX ───────────────────────────── */
+    .sbox{background:var(--bg0);border:1px solid var(--border);border-radius:5px;
+          padding:10px;font-size:11px;line-height:1.8;color:var(--txt2);margin-top:8px;font-style:italic}
+    .sbox b{color:var(--txt);font-style:normal}
+    .hl{color:var(--yellow);font-weight:700;font-style:normal}
+
+    /* ── LEGEND ───────────────────────────────── */
+    .leg{display:flex;align-items:center;gap:7px;font-size:11px;margin-top:5px}
+    .ldot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+
+    /* ── MAP ──────────────────────────────────── */
+    #map{flex:1}
+
+    /* ── LEAFLET ──────────────────────────────── */
+    .leaflet-popup-content-wrapper{border-radius:8px!important}
+    .leaflet-popup-content{font-family:'Segoe UI',sans-serif;font-size:13px}
+    .ttip{background:rgba(0,0,0,.78);color:#FFD700;border:none;
+          border-radius:4px;font-size:11px;padding:3px 7px}
+
+    /* ── SPINNER ──────────────────────────────── */
+    .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);
+          border-radius:50%;border-top-color:#fff;animation:rot .7s linear infinite}
+    @keyframes rot{to{transform:rotate(360deg)}}
+
+    /* ── COORD BOX ────────────────────────────── */
+    .cbox{background:var(--bg0);border:1px dashed var(--border);border-radius:5px;
+          padding:6px 9px;font-size:11px;color:var(--txt2);margin-top:5px;font-family:monospace}
+    .cbox.set{border-color:var(--green);color:var(--green)}
+
+    @media(max-width:700px){
+      #sb{width:100%;height:45dvh}
+      #main{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════ HEADER ═══════ -->
+<div id="hdr">
+  <div class="L">
+    <div class="pulse"></div>
+    <div>
+      <h1>Rastreador de Billetera · AirTag · Taxi Sevilla</h1>
+      <div class="sub">Línea de tiempo de pings · Ruta reconstruida · Proyección de posición actual</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:9px">
+    <div class="badge" id="mode-lbl">Modo: Normal</div>
+    <div class="badge">⏱ <span id="timer">00:00</span></div>
+  </div>
+</div>
+
+<!-- ═══════ MAIN ═══════ -->
+<div id="main">
+
+  <!-- ══ SIDEBAR ══ -->
+  <div id="sb">
+    <div id="sbar"><i class="fas fa-circle-info"></i><span id="smsg">Añade los pings del AirTag con hora y lugar — cuantos más, más preciso</span></div>
+
+    <div class="tabs">
+      <button class="tb on"  onclick="ST('pings',this)"><i class="fas fa-broadcast-tower"></i> Pings AirTag</button>
+      <button class="tb"     onclick="ST('calc',this)"><i class="fas fa-route"></i> Calcular</button>
+      <button class="tb"     onclick="ST('contacts',this)"><i class="fas fa-phone"></i> Contactos</button>
+      <button class="tb"     onclick="ST('report',this)"><i class="fas fa-file-alt"></i> Informe</button>
+    </div>
+
+    <div id="sb-body">
+
+      <!-- ══ TAB: PINGS ══ -->
+      <div id="pane-pings" class="pane on">
+
+        <!-- Quick import -->
+        <div class="sec">
+          <div class="stitle"><i class="fas fa-bolt" style="color:var(--yellow)"></i> Importación rápida</div>
+          <div class="alert ai">
+            <i class="fas fa-circle-info"></i>
+            <span>Escribe o pega una posición por línea:<br><b>HH:MM, dirección o lugar</b><br>Ejemplo:<br>
+              12:40, Real Alcázar Sevilla<br>
+              12:45, Ayuntamiento de Sevilla<br>
+              12:52, Plaza de la Encarnación
+            </span>
+          </div>
+          <label style="margin-top:8px;">Fecha del trayecto:</label>
+          <input type="date" id="travel-date" />
+          <label>Pings (uno por línea):</label>
+          <textarea id="quick-input" placeholder="12:40, Real Alcázar&#10;12:45, Ayuntamiento de Sevilla&#10;12:52, Plaza de la Encarnación&#10;13:01, Calle Betis Triana" rows="6"></textarea>
+          <button class="btn btn-blue" onclick="importQuick()">
+            <i class="fas fa-file-import"></i> Importar y geocodificar
+          </button>
+          <div id="geo-progress">
+            <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+            <div class="prog-lbl" id="prog-lbl">Geocodificando…</div>
+          </div>
+        </div>
+
+        <!-- Manual add -->
+        <div class="sec">
+          <div class="stitle"><i class="fas fa-plus-circle" style="color:var(--green)"></i> Añadir ping manualmente</div>
+          <div class="row">
+            <div style="flex:1">
+              <label>Hora:</label>
+              <input type="time" id="m-time" value="12:00"/>
+            </div>
+            <div style="flex:2">
+              <label>Dirección / lugar:</label>
+              <input type="text" id="m-addr" placeholder="Ej: Calle Sierpes, Sevilla"
+                     onkeydown="if(event.key==='Enter')addManual()"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:7px">
+            <button class="btn btn-ghost" onclick="addManual()" style="flex:1;margin:0">
+              <i class="fas fa-search"></i> Añadir
+            </button>
+            <button class="btn btn-ghost" onclick="modeSet('ping')" style="flex:1;margin:0">
+              <i class="fas fa-map-pin"></i> Clic en mapa
+            </button>
+          </div>
+        </div>
+
+        <!-- Timeline list -->
+        <div class="sec">
+          <div class="stitle" style="justify-content:space-between">
+            <span><i class="fas fa-timeline" style="color:var(--blue)"></i> Línea de tiempo (<span id="ping-count">0</span> pings)</span>
+            <button onclick="clearAllPings()" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer">
+              <i class="fas fa-trash"></i> Limpiar
+            </button>
+          </div>
+          <div id="ping-list">
+            <div style="color:var(--txt2);font-size:12px;text-align:center;padding:16px 0;">
+              Sin pings todavía. Usa la importación rápida o añade manualmente.
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /pings -->
+
+      <!-- ══ TAB: CALCULAR ══ -->
+      <div id="pane-calc" class="pane">
+
+        <div class="sec">
+          <div class="stitle"><i class="fas fa-sliders" style="color:var(--orange)"></i> Opciones de cálculo</div>
+
+          <label>Velocidad del taxi desde el último ping (para la proyección):</label>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <div class="tb" onclick="setSpd(20,this)" style="flex:1;min-width:70px;border:1px solid var(--border);border-radius:5px;padding:7px;cursor:pointer;color:var(--txt2)">🚦 20<br><span style="font-size:9px">km/h Centro</span></div>
+            <div class="tb on" onclick="setSpd(35,this)" style="flex:1;min-width:70px;border:1px solid var(--red);border-radius:5px;padding:7px;cursor:pointer;color:var(--red)">🚕 35<br><span style="font-size:9px">km/h Ciudad</span></div>
+            <div class="tb" onclick="setSpd(55,this)" style="flex:1;min-width:70px;border:1px solid var(--border);border-radius:5px;padding:7px;cursor:pointer;color:var(--txt2)">🛣️ 55<br><span style="font-size:9px">km/h Ronda</span></div>
+            <div class="tb" onclick="setSpd(80,this)" style="flex:1;min-width:70px;border:1px solid var(--border);border-radius:5px;padding:7px;cursor:pointer;color:var(--txt2)">✈️ 80<br><span style="font-size:9px">km/h Autopista</span></div>
+          </div>
+
+          <label style="margin-top:10px;">Velocidad personalizada: <b id="spd-lbl">35</b> km/h</label>
+          <input type="range" id="spd-r" min="10" max="100" value="35"
+                 oninput="speed=+this.value;document.getElementById('spd-lbl').textContent=this.value"
+                 style="width:100%;accent-color:var(--red);margin-top:4px"/>
+
+          <div class="alert aw" style="margin-top:10px">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span>Esta velocidad solo se usa para calcular el radio de búsqueda <b>desde el último ping</b>. Entre pings se usa la velocidad real detectada.</span>
+          </div>
+        </div>
+
+        <div class="sec">
+          <button class="btn btn-red" id="calc-btn" onclick="calculate()">
+            <i class="fas fa-route"></i> CALCULAR RUTA COMPLETA
+          </button>
+          <button class="btn btn-ghost" onclick="resetMap()">
+            <i class="fas fa-rotate-left"></i> Limpiar mapa
+          </button>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="pane on" style="display:none">
+
+          <div class="sec">
+            <div class="stitle"><i class="fas fa-chart-line" style="color:var(--red)"></i> Resultados del análisis</div>
+            <div class="cards">
+              <div class="card"><div class="val" id="r-total">--</div><div class="unit">km</div><div class="lbl">Distancia total</div></div>
+              <div class="card"><div class="val" id="r-rad">--</div><div class="unit">km</div><div class="lbl">Radio búsqueda</div></div>
+              <div class="card"><div class="val" id="r-avg">--</div><div class="unit">km/h</div><div class="lbl">Velocidad media</div></div>
+              <div class="card"><div class="val" id="r-elapsed">--</div><div class="unit">min</div><div class="lbl">Desde último ping</div></div>
+            </div>
+          </div>
+
+          <div class="sec">
+            <div class="stitle"><i class="fas fa-tachometer-alt" style="color:var(--orange)"></i> Análisis por tramo</div>
+            <div id="seg-list"></div>
+          </div>
+
+          <div class="sec">
+            <div class="stitle"><i class="fas fa-taxi" style="color:var(--yellow)"></i> Paradas más cercanas al área</div>
+            <div id="stands-list"></div>
+          </div>
+
+          <div class="sec">
+            <div class="stitle">Leyenda</div>
+            <div class="leg"><div class="ldot" style="background:var(--blue)"></div> Ruta confirmada por pings</div>
+            <div class="leg"><div class="ldot" style="background:var(--purple);border:2px dashed var(--purple);background:transparent"></div> Proyección desde último ping</div>
+            <div class="leg"><div class="ldot" style="background:var(--green)"></div> Zona alta probabilidad</div>
+            <div class="leg"><div class="ldot" style="background:var(--orange)"></div> Zona media probabilidad</div>
+            <div class="leg"><div class="ldot" style="background:var(--red)"></div> Zona baja probabilidad</div>
+          </div>
+        </div>
+
+      </div><!-- /calc -->
+
+      <!-- ══ TAB: CONTACTOS ══ -->
+      <div id="pane-contacts" class="pane">
+        <div class="sec">
+          <div class="stitle"><i class="fas fa-building" style="color:var(--red)"></i> Centrales de taxi Sevilla</div>
+
+          <div class="co">
+            <div class="co-name">🚕 Teletaxi Sevilla</div>
+            <div class="co-ph">954 62 22 22</div>
+            <div class="co-det"><i class="fas fa-map-marker-alt"></i> C/ Recaredo, 2 · 41003 Sevilla<br><i class="fas fa-clock"></i> 24h · Flota ~2.100 vehículos · teletaxisevilla.es</div>
+            <button class="cpbtn" onclick="cp('954 62 22 22',this)"><i class="fas fa-copy"></i> Copiar</button>
+          </div>
+
+          <div class="co" style="border-left-color:var(--orange)">
+            <div class="co-name">🚖 Radio Taxi Sevilla</div>
+            <div class="co-ph">954 58 00 00</div>
+            <div class="co-det"><i class="fas fa-map-marker-alt"></i> C/ Víctor de la Serna, 29 · 41005 Sevilla<br><i class="fas fa-clock"></i> 24h · Flota ~800 vehículos</div>
+            <button class="cpbtn" onclick="cp('954 58 00 00',this)"><i class="fas fa-copy"></i> Copiar</button>
+          </div>
+
+          <div class="co" style="border-left-color:var(--teal)">
+            <div class="co-name">🚓 Taxi Nervión / FreeNow</div>
+            <div class="co-ph">954 67 55 55</div>
+            <div class="co-det"><i class="fas fa-clock"></i> 24h · App FreeNow (Mytaxi)</div>
+            <button class="cpbtn" onclick="cp('954 67 55 55',this)"><i class="fas fa-copy"></i> Copiar</button>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="stitle"><i class="fas fa-shield-halved" style="color:var(--blue)"></i> Policía y objetos perdidos</div>
+          <div class="co" style="border-left-color:var(--blue)">
+            <div class="co-name">👮 Policía Local Sevilla</div>
+            <div class="co-ph">092</div>
+            <div class="co-det">Pueden solicitar registros a las centrales</div>
+          </div>
+          <div class="co" style="border-left-color:#9b59b6">
+            <div class="co-name">🏛️ Objetos Perdidos Ayuntamiento</div>
+            <div class="co-ph">955 47 29 00</div>
+            <div class="co-det"><i class="fas fa-map-marker-alt"></i> Av. de Málaga, 12 · 41007 Sevilla<br><i class="fas fa-clock"></i> L–V 9:00–14:00</div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="stitle"><i class="fas fa-comment-dots" style="color:var(--orange)"></i> Guión para la llamada</div>
+          <div class="sbox">
+            <b>"Llamo porque he perdido mi billetera en un taxi.</b><br>
+            Subí aproximadamente a las <span class="hl" id="s-pickup">[HORA RECOGIDA]</span>
+            en <span class="hl" id="s-addr">[DIRECCIÓN]</span>.<br>
+            Tengo un AirTag en la billetera. El recorrido detectado pasa por:
+            <span class="hl" id="s-route">[RUTA]</span>.<br>
+            El último ping fue a las <span class="hl" id="s-last">[HORA ÚLTIMO PING]</span>
+            cerca de <span class="hl" id="s-lastaddr">[LUGAR]</span>.
+            El taxi podría estar a <span class="hl" id="s-rad">[X km]</span> de esa posición.<br>
+            <b>¿Pueden ver qué taxis operaban en esa zona y horario? Muchas gracias."</b>
+          </div>
+          <button class="btn btn-ghost" onclick="cpScript()"><i class="fas fa-copy"></i> Copiar guión</button>
+        </div>
+      </div><!-- /contacts -->
+
+      <!-- ══ TAB: INFORME ══ -->
+      <div id="pane-report" class="pane">
+        <div class="sec">
+          <div class="stitle"><i class="fas fa-file-alt" style="color:var(--red)"></i> Datos del informe</div>
+          <label>Descripción de la billetera:</label>
+          <input type="text" id="rep-wallet" placeholder="Color, marca, contenido relevante…"/>
+          <label>Hora aproximada de pérdida:</label>
+          <input type="text" id="rep-losstime" placeholder="Ej: 12:38 del 23/06/2026"/>
+          <label>Dirección de recogida del taxi:</label>
+          <input type="text" id="rep-pickup" placeholder="Calle o plaza donde subiste"/>
+          <label>Destino del viaje (dónde bajaste):</label>
+          <input type="text" id="rep-dest" placeholder="Destino final del trayecto"/>
+          <label>Descripción del taxi:</label>
+          <input type="text" id="rep-taxi" placeholder="Color, número de licencia, conductor…"/>
+          <label>Número de denuncia / referencia:</label>
+          <input type="text" id="rep-ref" placeholder="Nº de caso policial si tienes"/>
+          <label>Notas:</label>
+          <textarea id="rep-notes" placeholder="Cualquier detalle adicional…"></textarea>
+          <button class="btn btn-red" onclick="printReport()" style="margin-top:12px">
+            <i class="fas fa-print"></i> Imprimir / Guardar PDF
+          </button>
+          <button class="btn btn-ghost" onclick="exportJSON()">
+            <i class="fas fa-download"></i> Exportar JSON
+          </button>
+        </div>
+      </div><!-- /report -->
+
+    </div><!-- /sb-body -->
+  </div><!-- /sb -->
+
+  <div id="map"></div>
+</div>
+
+<!-- ═══════ SCRIPTS ═══════ -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════
+//  STATIC DATA
+// ══════════════════════════════════════════════════
+const SEVILLA = [37.3891, -5.9845];
+
+const COMPANIES = [
+  { n:'Teletaxi Sevilla',       ph:'954 62 22 22', lat:37.38765, lng:-5.99128, col:'#FFD700' },
+  { n:'Radio Taxi Sevilla',     ph:'954 58 00 00', lat:37.38110, lng:-5.97558, col:'#FF6B35' },
+  { n:'Taxi Nervión / FreeNow', ph:'954 67 55 55', lat:37.39055, lng:-5.96770, col:'#4ECDC4' },
+];
+
+const STANDS = [
+  { n:'Plaza Nueva',              lat:37.38921, lng:-5.99598, imp:5 },
+  { n:'Av. de la Constitución',   lat:37.38698, lng:-5.99233, imp:4 },
+  { n:'Plaza del Salvador',       lat:37.39124, lng:-5.99219, imp:4 },
+  { n:'Alameda de Hércules',      lat:37.39748, lng:-5.99403, imp:3 },
+  { n:'Puerta de Jerez',          lat:37.38312, lng:-5.99483, imp:4 },
+  { n:'Plaza de España',          lat:37.37726, lng:-5.98765, imp:4 },
+  { n:'Estación Santa Justa',     lat:37.39194, lng:-5.97574, imp:5 },
+  { n:'Plaza de Armas',           lat:37.39204, lng:-6.00024, imp:4 },
+  { n:'Triana – C/ Betis',        lat:37.38349, lng:-6.00195, imp:3 },
+  { n:'Los Remedios',             lat:37.37679, lng:-6.00158, imp:3 },
+  { n:'Macarena (Basílica)',       lat:37.40135, lng:-5.99659, imp:3 },
+  { n:'Nervión (C.C.)',            lat:37.38965, lng:-5.96769, imp:3 },
+  { n:'Hospital Virgen del Rocío', lat:37.36109, lng:-5.98936, imp:3 },
+  { n:'Aeropuerto San Pablo',     lat:37.41794, lng:-5.89315, imp:5 },
+  { n:'Palacio de Congresos',     lat:37.37428, lng:-5.98456, imp:3 },
+  { n:'Calle San Eloy',           lat:37.39012, lng:-5.99389, imp:3 },
+  { n:'San Bernardo',             lat:37.37981, lng:-5.98001, imp:3 },
+  { n:'Torre Sevilla (Triana)',   lat:37.38583, lng:-6.00556, imp:3 },
+  { n:'Paseo de las Delicias',    lat:37.37432, lng:-5.99623, imp:3 },
+  { n:'Puerta de la Carne',       lat:37.38634, lng:-5.98798, imp:2 },
+  { n:'H. Virgen Macarena',       lat:37.41018, lng:-5.98891, imp:3 },
+  { n:'Av. de Kansas City',       lat:37.39412, lng:-5.97912, imp:3 },
+  { n:'Parque María Luisa',       lat:37.37215, lng:-5.98905, imp:2 },
+];
+
+// ══════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════
+let pings   = [];   // { id, time:Date, lat, lng, address, marker }
+let speed   = 35;
+let mapMode = null;
+let mapLayers = [];
+let heatL   = null;
+let standMks = [];
+let startTs = Date.now();
+let nextId  = 1;
+
+// ══════════════════════════════════════════════════
+//  MAP
+// ══════════════════════════════════════════════════
+const map = L.map('map', { center:SEVILLA, zoom:14 });
+
+const tLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  { attribution:'© OpenStreetMap © CARTO', maxZoom:19 });
+const tDark  = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  { attribution:'© OpenStreetMap © CARTO', maxZoom:19 });
+const tOSM   = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { attribution:'© OpenStreetMap', maxZoom:19 });
+
+tLight.addTo(map);
+L.control.layers({'Claro':tLight,'Oscuro':tDark,'OpenStreetMap':tOSM},{},{position:'topright'}).addTo(map);
+L.control.scale({imperial:false,metric:true,position:'bottomright'}).addTo(map);
+
+// Company markers
+COMPANIES.forEach(c => {
+  L.marker([c.lat,c.lng], { icon: pinIcon('🏢',c.col,38) }).addTo(map)
+    .bindPopup(`<div style="min-width:180px"><b>${c.n}</b><br><span style="font-size:20px;font-weight:800;color:#e74c3c">${c.ph}</span></div>`);
+});
+
+// Taxi stand markers
+STANDS.forEach(s => {
+  const mk = L.marker([s.lat,s.lng], { icon:circIcon('🚕','#FFD700',22), opacity:.75 })
+    .addTo(map)
+    .bindTooltip(s.n, { className:'ttip', direction:'top' })
+    .bindPopup(`<b>🚕 ${s.n}</b><br><small>Importancia: ${'★'.repeat(s.imp)}</small>`);
+  standMks.push({ mk, s });
+});
+
+// Map click
+map.on('click', e => {
+  if (mapMode === 'ping') {
+    const t = document.getElementById('m-time').value || '00:00';
+    addPingDirect(t, e.latlng.lat, e.latlng.lng, `${e.latlng.lat.toFixed(5)},${e.latlng.lng.toFixed(5)}`);
+    modeSet(null);
+  }
+});
+
+// ══════════════════════════════════════════════════
+//  ICONS
+// ══════════════════════════════════════════════════
+function pingIcon(num, color, isLast) {
+  const sz = isLast ? 36 : 30;
+  return L.divIcon({
+    html:`<div style="
+      background:${color};width:${sz}px;height:${sz}px;border-radius:50%;
+      border:${isLast?'3px solid #e74c3c':'2px solid #fff'};
+      box-shadow:0 2px 8px rgba(0,0,0,.5);
+      display:flex;align-items:center;justify-content:center;
+      font-size:${isLast?13:11}px;font-weight:800;color:#fff;
+      ${isLast?'animation:pulse 1.5s infinite':''}
+    ">${num}</div>`,
+    className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], popupAnchor:[0,-sz/2]
+  });
+}
+
+function pinIcon(emoji, color, sz=36) {
+  return L.divIcon({
+    html:`<div style="background:${color};width:${sz}px;height:${sz}px;border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);
+      display:flex;align-items:center;justify-content:center;">
+      <span style="transform:rotate(45deg);font-size:${Math.round(sz*.42)}px">${emoji}</span>
+    </div>`,
+    className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz], popupAnchor:[0,-sz]
+  });
+}
+
+function circIcon(emoji, color, sz=26) {
+  return L.divIcon({
+    html:`<div style="background:${color};width:${sz}px;height:${sz}px;border-radius:50%;
+      border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.4);
+      display:flex;align-items:center;justify-content:center;font-size:${Math.round(sz*.42)}px">
+      ${emoji}
+    </div>`,
+    className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], popupAnchor:[0,-sz/2]
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  GEOCODING
+// ══════════════════════════════════════════════════
+async function geocode(addr) {
+  const q = /^\d{1,2}\.\d+,\s*-?\d/.test(addr)
+    ? addr
+    : addr + (addr.toLowerCase().includes('sevill') ? '' : ', Sevilla, España');
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&countrycodes=es`);
+  const d = await r.json();
+  if (!d.length) return null;
+  return { lat:parseFloat(d[0].lat), lon:parseFloat(d[0].lon), display:d[0].display_name };
+}
+
+async function revGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+    const d = await r.json();
+    const parts = (d.display_name||'').split(',');
+    return parts.slice(0,3).join(',').trim();
+  } catch { return `${lat.toFixed(5)},${lng.toFixed(5)}`; }
+}
+
+// ══════════════════════════════════════════════════
+//  PARSE QUICK IMPORT
+// ══════════════════════════════════════════════════
+function parseLines(text) {
+  const dateVal = document.getElementById('travel-date').value || new Date().toISOString().slice(0,10);
+  const entries = [];
+  for (const raw of text.trim().split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    // Patterns: "HH:MM, address" or "HH:MMh address" or "HH MM address"
+    const m = line.match(/^(\d{1,2})[:h\.](\d{2})[,\s\-–·]+(.+)$/i);
+    if (!m) continue;
+    const [,h,min,addr] = m;
+    const dt = new Date(`${dateVal}T${h.padStart(2,'0')}:${min}:00`);
+    entries.push({ time:dt, address:addr.trim() });
+  }
+  return entries;
+}
+
+// ══════════════════════════════════════════════════
+//  IMPORT QUICK
+// ══════════════════════════════════════════════════
+async function importQuick() {
+  const text = document.getElementById('quick-input').value;
+  const entries = parseLines(text);
+  if (!entries.length) { alert('No se encontraron entradas válidas.\nFormato: HH:MM, dirección'); return; }
+
+  const progWrap = document.getElementById('geo-progress');
+  const progFill = document.getElementById('prog-fill');
+  const progLbl  = document.getElementById('prog-lbl');
+  progWrap.style.display = 'block';
+
+  for (let i=0; i<entries.length; i++) {
+    const e = entries[i];
+    progLbl.textContent = `Geocodificando ${i+1}/${entries.length}: ${e.address}`;
+    progFill.style.width = `${Math.round((i/entries.length)*100)}%`;
+
+    const r = await geocode(e.address);
+    if (r) {
+      addPingDirect(e.time, r.lat, r.lon, e.address);
+    } else {
+      console.warn('No geocoded:', e.address);
+    }
+    await delay(1150); // Nominatim rate limit: 1 req/s
+  }
+
+  progFill.style.width = '100%';
+  progLbl.textContent = `✅ ${pings.length} pings cargados correctamente`;
+  setTimeout(() => { progWrap.style.display='none'; }, 3000);
+
+  refreshMarkers();
+  ST('calc', document.querySelectorAll('.tb')[1]);
+  document.getElementById('smsg').textContent = `${pings.length} pings cargados · Ahora ve a "Calcular"`;
+}
+
+// ══════════════════════════════════════════════════
+//  ADD PING
+// ══════════════════════════════════════════════════
+function addPingDirect(time, lat, lng, address) {
+  // time can be a Date, a "HH:MM" string, or a datetime string
+  let dt;
+  if (time instanceof Date) dt = time;
+  else {
+    const dateVal = document.getElementById('travel-date').value || new Date().toISOString().slice(0,10);
+    if (/^\d{1,2}:\d{2}$/.test(time)) {
+      dt = new Date(`${dateVal}T${time.padStart(5,'0')}:00`);
+    } else {
+      dt = new Date(time);
+    }
+  }
+
+  const id = nextId++;
+  const ping = { id, time:dt, lat, lng, address, marker:null };
+  pings.push(ping);
+  pings.sort((a,b) => a.time-b.time);
+
+  renderPingList();
+  return ping;
+}
+
+async function addManual() {
+  const tStr = document.getElementById('m-time').value;
+  const addr = document.getElementById('m-addr').value.trim();
+  if (!addr) return;
+
+  // Check if it's coordinates
+  const llMatch = addr.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+  if (llMatch) {
+    addPingDirect(tStr, parseFloat(llMatch[1]), parseFloat(llMatch[2]), addr);
+    document.getElementById('m-addr').value = '';
+    refreshMarkers();
+    return;
+  }
+
+  const r = await geocode(addr);
+  if (!r) { alert('Dirección no encontrada.'); return; }
+  addPingDirect(tStr, r.lat, r.lon, addr);
+  document.getElementById('m-addr').value = '';
+  refreshMarkers();
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER PING LIST (sidebar)
+// ══════════════════════════════════════════════════
+function renderPingList() {
+  const el = document.getElementById('ping-list');
+  document.getElementById('ping-count').textContent = pings.length;
+
+  if (!pings.length) {
+    el.innerHTML = '<div style="color:var(--txt2);font-size:12px;text-align:center;padding:16px 0">Sin pings todavía.</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  pings.forEach((p, i) => {
+    const isLast = i === pings.length-1;
+    const color = pingColor(i, pings.length);
+    const card = document.createElement('div');
+    card.className = `ping-card done${isLast?' last-ping':''}`;
+    card.dataset.id = p.id;
+
+    // Segment info
+    let segHtml = '';
+    if (i > 0) {
+      const prev = pings[i-1];
+      const distM = haverDist(prev.lat, prev.lng, p.lat, p.lng);
+      const dtMin = (p.time - prev.time) / 60000;
+      const kmh   = dtMin > 0 ? (distM/1000)/(dtMin/60) : 0;
+      const badge = speedBadge(kmh);
+      segHtml = `<div class="ping-seg">↑ desde ping ${i}: ${(distM/1000).toFixed(2)} km en ${Math.round(dtMin)} min → ${Math.round(kmh)} km/h ${badge}</div>`;
+    }
+
+    card.innerHTML = `
+      <div class="ping-num" style="background:${color}">${i+1}</div>
+      <div class="ping-time-lbl">${fmt(p.time)}${isLast?' <span style="color:var(--red);font-size:10px">● ÚLTIMO</span>':''}</div>
+      <div class="ping-addr-lbl" title="${p.address}">${p.address}</div>
+      <div class="ping-coords">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</div>
+      ${segHtml}
+      <button class="ping-del" onclick="removePing(${p.id})"><i class="fas fa-times"></i></button>
+    `;
+    card.onclick = e => { if(!e.target.closest('.ping-del')) map.setView([p.lat,p.lng],17); };
+    el.appendChild(card);
+  });
+}
+
+function removePing(id) {
+  const idx = pings.findIndex(p=>p.id===id);
+  if (idx < 0) return;
+  if (pings[idx].marker) map.removeLayer(pings[idx].marker);
+  pings.splice(idx,1);
+  renderPingList();
+  refreshMarkers();
+}
+
+function clearAllPings() {
+  pings.forEach(p => { if(p.marker) map.removeLayer(p.marker); });
+  pings = [];
+  renderPingList();
+  resetMap();
+}
+
+// ══════════════════════════════════════════════════
+//  REFRESH MARKERS (map dots)
+// ══════════════════════════════════════════════════
+function refreshMarkers() {
+  // Remove old ping markers
+  pings.forEach(p => { if(p.marker) { map.removeLayer(p.marker); p.marker=null; } });
+
+  pings.forEach((p, i) => {
+    const isLast = i === pings.length-1;
+    const color  = pingColor(i, pings.length);
+    const icon   = pingIcon(i+1, isLast ? '#e74c3c' : color, isLast);
+    p.marker = L.marker([p.lat,p.lng], { icon, zIndexOffset: isLast?1000:i })
+      .addTo(map)
+      .bindPopup(`
+        <b>Ping ${i+1} — ${fmt(p.time)}</b><br>
+        ${p.address}<br>
+        <code style="font-size:11px">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</code>
+      `);
+  });
+
+  if (pings.length) {
+    const lats = pings.map(p=>p.lat), lngs = pings.map(p=>p.lng);
+    map.fitBounds(L.latLngBounds([
+      [Math.min(...lats)-0.01, Math.min(...lngs)-0.01],
+      [Math.max(...lats)+0.01, Math.max(...lngs)+0.01]
+    ]));
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  CALCULATE
+// ══════════════════════════════════════════════════
+async function calculate() {
+  if (pings.length < 2) { alert('Necesitas al menos 2 pings para calcular la ruta.'); return; }
+
+  const btn = document.getElementById('calc-btn');
+  btn.innerHTML = '<div class="spin"></div> Calculando ruta…';
+  btn.disabled = true;
+  resetMap();
+
+  try {
+    // Build OSRM waypoint string
+    const coords = pings.map(p=>`${p.lng},${p.lat}`).join(';');
+    let routeGeom = null, routeDistM = 0;
+
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+      const r = await fetch(url);
+      const d = await r.json();
+      if (d.code==='Ok' && d.routes.length) {
+        routeGeom  = d.routes[0].geometry;
+        routeDistM = d.routes[0].distance;
+      }
+    } catch(e) { console.warn('OSRM failed, using polyline fallback', e); }
+
+    // Draw confirmed route
+    if (routeGeom) {
+      drawRouteFromGeoJSON(routeGeom);
+    } else {
+      drawPolylineFallback();
+      routeDistM = totalPolyDist();
+    }
+
+    // Projection from last ping
+    const last    = pings[pings.length-1];
+    const elapsed = Math.max(0, (Date.now() - last.time) / 60000);
+    const radKm   = (elapsed / 60) * speed;
+
+    drawZones(last, radKm);
+    drawHeat(last, radKm);
+    drawProjection(last, radKm);
+
+    // Segment analysis
+    const segs = buildSegments();
+    const totalDist = routeDistM / 1000 || segs.reduce((a,s)=>a+s.distKm,0);
+    const avgSpd = segs.length ? segs.reduce((a,s)=>a+s.kmh,0)/segs.length : 0;
+
+    // Nearest stands
+    const nearby = nearbyStands(last, radKm);
+
+    // Show results
+    document.getElementById('r-total').textContent   = totalDist.toFixed(2);
+    document.getElementById('r-rad').textContent     = radKm.toFixed(2);
+    document.getElementById('r-avg').textContent     = Math.round(avgSpd);
+    document.getElementById('r-elapsed').textContent = Math.round(elapsed);
+    renderSegList(segs);
+    renderStandsList(nearby, radKm);
+    document.getElementById('results').style.display = 'block';
+
+    updateScript();
+
+    // Fit to include search area
+    const padded = L.latLngBounds([[last.lat-radKm/111,last.lng-radKm/111],[last.lat+radKm/111,last.lng+radKm/111]]);
+    pings.forEach(p => padded.extend([p.lat,p.lng]));
+    map.fitBounds(padded.pad(0.1));
+
+    document.getElementById('smsg').textContent = `✅ Ruta calculada · ${pings.length} pings · Radio: ${radKm.toFixed(1)} km · ${Math.round(elapsed)} min desde último ping`;
+
+  } catch(e) {
+    console.error(e);
+    alert('Error al calcular. Comprueba tu conexión.');
+  }
+
+  btn.innerHTML = '<i class="fas fa-route"></i> RECALCULAR';
+  btn.disabled = false;
+}
+
+// ══════════════════════════════════════════════════
+//  SEGMENTS
+// ══════════════════════════════════════════════════
+function buildSegments() {
+  const segs = [];
+  for (let i=1; i<pings.length; i++) {
+    const a=pings[i-1], b=pings[i];
+    const distKm = haverDist(a.lat,a.lng,b.lat,b.lng)/1000;
+    const dtMin  = (b.time - a.time)/60000;
+    const kmh    = dtMin>0 ? distKm/(dtMin/60) : 0;
+    segs.push({ from:a, to:b, distKm, dtMin, kmh, idx:i });
+  }
+  return segs;
+}
+
+function renderSegList(segs) {
+  const el = document.getElementById('seg-list');
+  el.innerHTML = '';
+  segs.forEach(s => {
+    const badge = speedBadge(s.kmh);
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--bg0);border:1px solid var(--border);border-radius:5px;padding:8px;margin-top:5px;font-size:11px';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span><b>Ping ${s.idx} → ${s.idx+1}</b></span>
+        <span style="color:var(--txt2)">${fmt(s.from.time)} → ${fmt(s.to.time)}</span>
+      </div>
+      <div style="color:var(--txt2);margin-top:3px">
+        ${s.distKm.toFixed(2)} km · ${Math.round(s.dtMin)} min · ${Math.round(s.kmh)} km/h ${badge}
+      </div>
+      <div style="color:var(--txt2);font-size:10px;margin-top:2px;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${s.from.address} → ${s.to.address}
+      </div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  DRAW
+// ══════════════════════════════════════════════════
+function track(l) { mapLayers.push(l); return l; }
+
+function drawRouteFromGeoJSON(geom) {
+  const coords = geom.coordinates.map(c=>[c[1],c[0]]);
+  track(L.polyline(coords, { color:'#000', weight:8, opacity:.2, interactive:false }).addTo(map));
+  track(L.polyline(coords, { color:'#3498db', weight:5, opacity:.92, interactive:false }).addTo(map));
+  track(L.polyline(coords, { color:'#87ceeb', weight:2, opacity:.55, dashArray:'10,18', interactive:false }).addTo(map));
+}
+
+function drawPolylineFallback() {
+  const coords = pings.map(p=>[p.lat,p.lng]);
+  track(L.polyline(coords, { color:'#3498db', weight:4, opacity:.8, dashArray:'8,6' }).addTo(map)
+    .bindTooltip('Ruta aproximada (sin datos de carretera)', {direction:'top'}));
+}
+
+function totalPolyDist() {
+  let d=0;
+  for(let i=1;i<pings.length;i++) d+=haverDist(pings[i-1].lat,pings[i-1].lng,pings[i].lat,pings[i].lng);
+  return d/1000;
+}
+
+function drawProjection(last, radKm) {
+  if (pings.length < 2) return;
+  const prev = pings[pings.length-2];
+  const dx   = last.lng - prev.lng;
+  const dy   = last.lat - prev.lat;
+  const d    = Math.sqrt(dx*dx+dy*dy);
+  if (d < 1e-9) return;
+  const nx=dx/d, ny=dy/d;
+  const deg=1/111;
+  const pts=[[last.lat, last.lng]];
+  for(let i=1;i<=10;i++) {
+    pts.push([last.lat + ny*radKm*deg*(i/10), last.lng + nx*radKm*deg*(i/10)]);
+  }
+  const line = track(L.polyline(pts, { color:'#9b59b6', weight:3, opacity:.75, dashArray:'8,7' }).addTo(map));
+  line.bindTooltip('📍 Dirección proyectada del taxi', {direction:'right'});
+  const tip = pts[pts.length-1];
+  track(L.circleMarker(tip, { radius:6, color:'#9b59b6', fillColor:'#9b59b6', fillOpacity:.85, weight:2 }).addTo(map));
+}
+
+function drawZones(last, radKm) {
+  const z = [
+    { r:1.00, col:'#e74c3c', fo:.07 },
+    { r:0.66, col:'#f39c12', fo:.11 },
+    { r:0.33, col:'#27ae60', fo:.20 },
+  ];
+  z.forEach(v => track(L.circle([last.lat,last.lng], {
+    radius:v.r*radKm*1000, color:v.col, fillColor:v.col,
+    fillOpacity:v.fo, weight:1.5, opacity:.6, dashArray:v.r===1?'6,5':null
+  }).addTo(map).bindPopup(`${Math.round(v.r*100)}% del radio · ${(v.r*radKm).toFixed(2)} km`)));
+
+  track(L.circleMarker([last.lat,last.lng], {radius:5,color:'#e74c3c',fillColor:'#e74c3c',fillOpacity:1,weight:0}).addTo(map));
+}
+
+function drawHeat(last, radKm) {
+  if (heatL) { map.removeLayer(heatL); heatL=null; }
+  const R=radKm*1000, cosL=Math.cos(last.lat*Math.PI/180);
+  const pts=[];
+  for(let i=0;i<350;i++){
+    const r=Math.sqrt(Math.random())*R, θ=Math.random()*2*Math.PI;
+    pts.push([last.lat+(r*Math.sin(θ))/111111, last.lng+(r*Math.cos(θ))/(111111*cosL), Math.max(0,1-r/R)]);
+  }
+  for(let i=0;i<150;i++){
+    const r=Math.sqrt(Math.random())*R*.28, θ=Math.random()*2*Math.PI;
+    pts.push([last.lat+(r*Math.sin(θ))/111111, last.lng+(r*Math.cos(θ))/(111111*cosL), .9]);
+  }
+  heatL=L.heatLayer(pts,{radius:35,blur:28,maxZoom:17,
+    gradient:{0:'transparent',.25:'#27ae60',.55:'#f39c12',.8:'#e74c3c',1:'#c0392b'}}).addTo(map);
+}
+
+// ══════════════════════════════════════════════════
+//  NEAREST STANDS
+// ══════════════════════════════════════════════════
+function nearbyStands(last, radKm) {
+  const r = STANDS.map(s => ({ ...s, dist: haverDist(last.lat,last.lng,s.lat,s.lng)/1000 }))
+                  .sort((a,b)=>a.dist-b.dist);
+
+  standMks.forEach(({mk,s}) => {
+    const d = haverDist(last.lat,last.lng,s.lat,s.lng)/1000;
+    const inR = d <= radKm*1.1;
+    mk.setOpacity(inR?1:.3);
+    mk.setIcon(circIcon('🚕', inR?'#FFD700':'#555', inR?30:20));
+  });
+  return r;
+}
+
+function renderStandsList(stands, radKm) {
+  const el = document.getElementById('stands-list'); el.innerHTML='';
+  stands.slice(0,8).forEach((s,i) => {
+    const inR = s.dist<=radKm;
+    const prob = Math.max(5, Math.round(100-(s.dist/Math.max(radKm*1.5,.1))*65));
+    const col  = prob>55?'#27ae60':prob>30?'#f39c12':'#e74c3c';
+    const div  = document.createElement('div');
+    div.className='stand';
+    div.innerHTML=`
+      <div class="snum" style="background:${inR?'#FFD700':'#555'}">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.n}</div>
+        <div style="font-size:10px;color:var(--txt2)">${s.dist.toFixed(2)} km · ${inR?'⚠️ DENTRO del área':'Fuera'} · ${'★'.repeat(s.imp)}</div>
+        <div class="pbar"><div class="pfill" style="width:${prob}%;background:${col}"></div></div>
+      </div>
+      <div style="font-size:11px;color:${col};font-weight:700">${prob}%</div>
+    `;
+    div.onclick=()=>map.setView([s.lat,s.lng],17);
+    el.appendChild(div);
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  RESET MAP
+// ══════════════════════════════════════════════════
+function resetMap() {
+  mapLayers.forEach(l=>map.removeLayer(l)); mapLayers=[];
+  if(heatL){map.removeLayer(heatL);heatL=null;}
+  standMks.forEach(({mk})=>{mk.setOpacity(.75);mk.setIcon(circIcon('🚕','#FFD700',22));});
+  document.getElementById('results').style.display='none';
+}
+
+// ══════════════════════════════════════════════════
+//  MODE
+// ══════════════════════════════════════════════════
+function modeSet(m) {
+  mapMode=m;
+  document.getElementById('mode-lbl').textContent = m==='ping'?'Modo: Añadiendo ping':'Modo: Normal';
+  map.getContainer().style.cursor = m?'crosshair':'';
+  document.getElementById('smsg').textContent = m==='ping'
+    ? '🔵 Haz clic en el mapa para añadir el ping en esa posición'
+    : 'Modo exploración';
+}
+
+// ══════════════════════════════════════════════════
+//  SCRIPT
+// ══════════════════════════════════════════════════
+function updateScript() {
+  if (!pings.length) return;
+  const first = pings[0];
+  const last  = pings[pings.length-1];
+  const route = pings.slice(1,-1).map(p=>{
+    const short=p.address.split(',')[0].trim(); return short;
+  }).filter(Boolean);
+
+  document.getElementById('s-pickup').textContent   = fmt(first.time);
+  document.getElementById('s-addr').textContent     = first.address.split(',')[0].trim();
+  document.getElementById('s-route').textContent    = route.length ? route.join(' → ') : 'ruta directa';
+  document.getElementById('s-last').textContent     = fmt(last.time);
+  document.getElementById('s-lastaddr').textContent = last.address.split(',')[0].trim();
+  const rad = document.getElementById('r-rad').textContent;
+  if (rad!=='--') document.getElementById('s-rad').textContent = rad+' km';
+}
+
+// ══════════════════════════════════════════════════
+//  SPEED SELECTOR
+// ══════════════════════════════════════════════════
+function setSpd(v, el) {
+  speed=v;
+  document.getElementById('spd-r').value=v;
+  document.getElementById('spd-lbl').textContent=v;
+  document.querySelectorAll('#pane-calc .tb').forEach(b=>{
+    b.style.color='var(--txt2)'; b.style.borderColor='var(--border)';
+  });
+  el.style.color='var(--red)'; el.style.borderColor='var(--red)';
+}
+
+// ══════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════
+function ST(name, btn) {
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('pane-'+name).classList.add('on');
+  btn.classList.add('on');
+}
+
+// ══════════════════════════════════════════════════
+//  COPY
+// ══════════════════════════════════════════════════
+function cp(text, btn) {
+  navigator.clipboard.writeText(text);
+  const o=btn.innerHTML; btn.innerHTML='✓ Copiado';
+  setTimeout(()=>btn.innerHTML=o, 1600);
+}
+function cpScript() {
+  navigator.clipboard.writeText(document.querySelector('.sbox').innerText.replace(/\s+/g,' ').trim());
+  alert('Guión copiado.');
+}
+
+// ══════════════════════════════════════════════════
+//  REPORT
+// ══════════════════════════════════════════════════
+function printReport() {
+  const v=id=>document.getElementById(id).value||'–';
+  const now=new Date();
+
+  const timeline = pings.map((p,i)=>`
+    <tr style="background:${i%2?'#f9f9f9':'#fff'}">
+      <td style="padding:6px 10px;font-weight:600">${i+1}</td>
+      <td style="padding:6px 10px">${fmt(p.time)}</td>
+      <td style="padding:6px 10px">${p.address}</td>
+      <td style="padding:6px 10px;font-family:monospace;font-size:11px">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</td>
+    </tr>`).join('');
+
+  const segs = buildSegments().map(s=>`
+    <tr>
+      <td style="padding:6px 10px">${s.idx} → ${s.idx+1}</td>
+      <td style="padding:6px 10px">${fmt(s.from.time)} → ${fmt(s.to.time)}</td>
+      <td style="padding:6px 10px">${s.distKm.toFixed(2)} km</td>
+      <td style="padding:6px 10px">${Math.round(s.dtMin)} min</td>
+      <td style="padding:6px 10px">${Math.round(s.kmh)} km/h</td>
+    </tr>`).join('');
+
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Informe pérdida taxi – ${now.toLocaleDateString('es-ES')}</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:900px;margin:30px auto;padding:20px;font-size:13px;color:#333}
+h1{color:#e74c3c;border-bottom:3px solid #e74c3c;padding-bottom:8px}
+h2{color:#1e3a5f;margin:18px 0 10px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th{background:#e74c3c;color:#fff;padding:8px 10px;text-align:left}
+.box{background:#fef9e7;border:1px solid #f39c12;border-radius:6px;padding:12px;margin:10px 0}
+.co{background:#eaf4ff;border:1px solid #3498db;border-radius:6px;padding:12px;margin:8px 0;line-height:2}
+@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<h1>🔍 INFORME — OBJETO PERDIDO EN TAXI · SEVILLA</h1>
+<p><b>Generado:</b> ${now.toLocaleString('es-ES')}</p>
+
+<div class="box">
+<b>⚠️ OBJETO:</b> ${v('rep-wallet')}<br>
+<b>Hora pérdida:</b> ${v('rep-losstime')} &nbsp;|&nbsp; <b>Ref./Denuncia:</b> ${v('rep-ref')}
+</div>
+
+<h2>🚕 Datos del trayecto</h2>
+<table><tr><th>Campo</th><th>Valor</th></tr>
+<tr><td>Punto de recogida</td><td>${v('rep-pickup')}</td></tr>
+<tr><td>Destino del viaje</td><td>${v('rep-dest')}</td></tr>
+<tr><td>Descripción del taxi</td><td>${v('rep-taxi')}</td></tr>
+</table>
+
+<h2>📡 Línea de tiempo AirTag (${pings.length} pings)</h2>
+<table><tr><th>#</th><th>Hora</th><th>Lugar</th><th>Coordenadas</th></tr>${timeline}</table>
+
+<h2>⚡ Análisis de velocidad por tramo</h2>
+<table><tr><th>Tramo</th><th>Horario</th><th>Distancia</th><th>Duración</th><th>Velocidad</th></tr>${segs}</table>
+
+<h2>📊 Proyección desde último ping</h2>
+<p>Velocidad estimada: ${speed} km/h · Radio búsqueda: ${document.getElementById('r-rad').textContent} km · Tiempo transcurrido: ${document.getElementById('r-elapsed').textContent} min</p>
+
+<h2>📝 Notas</h2><p>${v('rep-notes')}</p>
+
+<h2>📞 Contactos</h2>
+<div class="co">📞 <b>Teletaxi Sevilla:</b> 954 62 22 22 · C/ Recaredo, 2<br>
+📞 <b>Radio Taxi Sevilla:</b> 954 58 00 00 · C/ Víctor de la Serna, 29<br>
+👮 <b>Policía Local:</b> 092 &nbsp;|&nbsp; 🏛️ <b>Objetos Perdidos Ayuntamiento:</b> 955 47 29 00</div>
+
+<p style="margin-top:28px;font-size:10px;color:#aaa">Generado por rastreador-taxi-sevilla · ${now.toLocaleString('es-ES')}</p>
+</body></html>`;
+
+  const w=window.open('','_blank'); w.document.write(html); w.document.close(); w.print();
+}
+
+function exportJSON() {
+  const data={
+    generated:new Date().toISOString(), speedKmh:speed,
+    pings:pings.map(p=>({time:p.time.toISOString(),lat:p.lat,lng:p.lng,address:p.address})),
+    searchRadiusKm:document.getElementById('r-rad').textContent,
+    elapsedMin:document.getElementById('r-elapsed').textContent,
+  };
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download=`rastreo_taxi_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+// ══════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════
+function haverDist(lat1,lon1,lat2,lon2) {
+  const R=6371000, φ1=lat1*Math.PI/180, φ2=lat2*Math.PI/180;
+  const dφ=(lat2-lat1)*Math.PI/180, dλ=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+function fmt(t) {
+  if (!t) return '?';
+  const d = t instanceof Date ? t : new Date(t);
+  return d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+}
+
+function pingColor(i, total) {
+  const ratio = total<=1 ? 0 : i/(total-1);
+  // Gradient: blue → purple → red
+  const r=Math.round(52+ratio*(231-52));
+  const g=Math.round(152+ratio*(76-152));
+  const b=Math.round(219+ratio*(60-219));
+  return `rgb(${r},${g},${b})`;
+}
+
+function speedBadge(kmh) {
+  if (kmh < 5)  return `<span class="spd-badge spd-slow">⚫ DETENIDO</span>`;
+  if (kmh < 25) return `<span class="spd-badge spd-slow">🔵 Lento</span>`;
+  if (kmh < 50) return `<span class="spd-badge spd-ok">🟢 Ciudad</span>`;
+  if (kmh < 75) return `<span class="spd-badge spd-fast">🟠 Ronda</span>`;
+  return `<span class="spd-badge spd-hwy">🔴 Autopista</span>`;
+}
+
+// ══════════════════════════════════════════════════
+//  TIMER
+// ══════════════════════════════════════════════════
+setInterval(()=>{
+  const s=Math.floor((Date.now()-startTs)/1000);
+  document.getElementById('timer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+},1000);
+
+// Set today's date
+document.getElementById('travel-date').value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
