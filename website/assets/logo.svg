@@ -1,12 +1,13 @@
-<svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Meridian Studios">
-  <!-- Left angular pillar -->
-  <path d="M60 62 L118 62 L118 198 L86 198 L86 108 L60 108 Z" fill="currentColor"/>
-  <!-- Left inner blue trapezoid -->
-  <path d="M96 118 L118 118 L118 190 L104 190 Z" fill="#4B63F0"/>
-  <!-- Right angular pillar (mirror) -->
-  <path d="M200 62 L142 62 L142 198 L174 198 L174 108 L200 108 Z" fill="currentColor"/>
-  <!-- Right inner blue trapezoid -->
-  <path d="M164 118 L142 118 L142 190 L156 190 Z" fill="#4B63F0"/>
-  <!-- Central blue line -->
-  <rect x="128.6" y="40" width="2.8" height="180" rx="1.4" fill="#4B63F0"/>
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Meridian Studios">
+  <!-- blue windows (behind) -->
+  <path d="M42 52 L54 52 L55 88 L40 88 Z" fill="#4B63F0"/>
+  <path d="M78 52 L66 52 L65 88 L80 88 Z" fill="#4B63F0"/>
+  <!-- left tower with window hole -->
+  <path fill-rule="evenodd" fill="currentColor"
+        d="M34 30 L56 34 L57 96 L24 96 Z  M43 54 L54 54 L54.5 86 L41 86 Z"/>
+  <!-- right tower with window hole -->
+  <path fill-rule="evenodd" fill="currentColor"
+        d="M86 30 L64 34 L63 96 L96 96 Z  M77 54 L66 54 L65.5 86 L79 86 Z"/>
+  <!-- central line -->
+  <rect x="59" y="24" width="2" height="76" rx="1" fill="#4B63F0"/>
 </svg>

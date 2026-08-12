@@ -53,12 +53,13 @@
 
 <!-- HERO -->
 <section class="hero" id="hero">
-  <div class="hero__index"><span class="dot"></span> 01</div>
-  <div class="hero__inner">
+  <canvas class="hero__canvas" id="heroCanvas"></canvas>
+  <div class="hero__inner" id="heroInner">
     <div class="hero__copy">
+      <div class="hero__index" data-speed="0.5"><span class="dot"></span> Estudio digital · Est. 2018</div>
       <h1 class="hero__title reveal-lines">
         <span>Experiencias digitales</span>
-        <span>que <em>mueven marcas</em></span>
+        <span>que mueven <em class="rotator" data-words="marcas,negocios,ideas,ventas">marcas</em></span>
       </h1>
       <p class="hero__sub">Diseñamos y construimos páginas web premium, rápidas, hermosas y creadas para convertir.</p>
       <a href="#work" class="link-arrow" data-cursor="hover">Ver nuestro trabajo <span>&rarr;</span></a>
@@ -108,26 +109,60 @@
     <article class="card" data-tilt data-cursor="view">
       <span class="card__num">01</span>
       <div class="card__thumb thumb--finova">
-        <span class="thumb__label">Future<br>of finance</span>
+        <svg class="mock" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect width="300" height="400" fill="#0c0c12"/>
+          <text x="26" y="80" fill="#fff" font-family="Space Grotesk" font-size="30" font-weight="600">Future</text>
+          <text x="26" y="116" fill="#8a8aa0" font-family="Space Grotesk" font-size="30" font-weight="600">of finance</text>
+          <rect x="26" y="150" width="150" height="8" rx="4" fill="#22222c"/>
+          <rect x="26" y="168" width="110" height="8" rx="4" fill="#1a1a22"/>
+          <rect x="26" y="230" width="248" height="140" rx="12" fill="#111119" stroke="#22222c"/>
+          <path d="M40 340 L90 300 L140 320 L190 270 L240 290 L260 260" fill="none" stroke="#4B63F0" stroke-width="2.5"/>
+          <circle cx="260" cy="260" r="4" fill="#6a7bff"/>
+        </svg>
       </div>
       <div class="card__meta"><h3>Finova</h3><p>Web Design · Development</p></div>
     </article>
 
     <article class="card" data-tilt data-cursor="view">
       <span class="card__num">02</span>
-      <div class="card__thumb thumb--northline"><span class="thumb__aa">Aa</span></div>
+      <div class="card__thumb thumb--northline">
+        <svg class="mock" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect width="300" height="400" fill="#0e0e14"/>
+          <text x="150" y="220" fill="rgba(255,255,255,.28)" font-family="Space Grotesk" font-size="150" font-weight="700" text-anchor="middle">Aa</text>
+          <rect x="26" y="300" width="90" height="8" rx="4" fill="#4B63F0"/>
+          <rect x="26" y="320" width="180" height="6" rx="3" fill="#22222c"/>
+          <rect x="26" y="336" width="140" height="6" rx="3" fill="#1a1a22"/>
+        </svg>
+      </div>
       <div class="card__meta"><h3>Northline</h3><p>Branding · Web Design</p></div>
     </article>
 
     <article class="card" data-tilt data-cursor="view">
       <span class="card__num">03</span>
-      <div class="card__thumb thumb--voltex"><span class="thumb__label">Smart<br>innovation</span></div>
+      <div class="card__thumb thumb--voltex">
+        <svg class="mock" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs><radialGradient id="vg" cx="55%" cy="42%" r="55%"><stop offset="0" stop-color="#4B63F0" stop-opacity=".55"/><stop offset="1" stop-color="#08080c" stop-opacity="0"/></radialGradient></defs>
+          <rect width="300" height="400" fill="#08080c"/>
+          <rect width="300" height="400" fill="url(#vg)"/>
+          <text x="150" y="150" fill="#fff" font-family="Space Grotesk" font-size="26" font-weight="600" text-anchor="middle">Smart</text>
+          <text x="150" y="182" fill="#fff" font-family="Space Grotesk" font-size="26" font-weight="600" text-anchor="middle">innovation</text>
+          <rect x="105" y="240" width="90" height="30" rx="15" fill="none" stroke="rgba(255,255,255,.3)"/>
+          <rect x="122" y="252" width="56" height="6" rx="3" fill="rgba(255,255,255,.6)"/>
+        </svg>
+      </div>
       <div class="card__meta"><h3>Voltex</h3><p>Web Design · Development</p></div>
     </article>
 
     <article class="card" data-tilt data-cursor="view">
       <span class="card__num">04</span>
-      <div class="card__thumb thumb--lumen"></div>
+      <div class="card__thumb thumb--lumen">
+        <svg class="mock" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6a7bff"/><stop offset=".5" stop-color="#4B63F0"/><stop offset="1" stop-color="#1a1a30"/></linearGradient></defs>
+          <rect width="300" height="400" fill="#08080c"/>
+          <path d="M0 300 Q75 200 150 260 T300 220 V400 H0 Z" fill="url(#lg)" opacity=".8"/>
+          <path d="M0 340 Q75 250 150 300 T300 270 V400 H0 Z" fill="#4B63F0" opacity=".4"/>
+        </svg>
+      </div>
       <div class="card__meta"><h3>Lumen</h3><p>Branding · Web Design</p></div>
     </article>
   </div>
@@ -140,6 +175,14 @@
   <div class="stat"><b data-count="98" data-suffix="%">0</b><span>Clientes satisfechos</span></div>
   <div class="stat"><b data-count="8" data-suffix="+">0</b><span>Años de experiencia</span></div>
   <div class="stat"><b data-count="24" data-suffix="/7">0</b><span>Soporte dedicado</span></div>
+</section>
+
+<!-- CLIENTS -->
+<section class="clients">
+  <p class="clients__label">Con la confianza de equipos ambiciosos</p>
+  <div class="clients__row">
+    <span>◆ Finova</span><span>Northline</span><span>▲ Voltex</span><span>Lumen</span><span>✦ Nova</span><span>Orbit</span><span>⬡ Apex</span>
+  </div>
 </section>
 
 <!-- SERVICES -->
@@ -185,13 +228,41 @@
       <p class="about__text">Nos asociamos con marcas ambiciosas para crear experiencias digitales que son hermosas, funcionales y construidas para crecer.</p>
       <a href="#process" class="link-arrow" data-cursor="hover">Nuestra historia <span>&rarr;</span></a>
     </div>
-    <div class="about__visual" data-tilt>
+    <div class="about__visual clip-reveal" data-tilt>
       <div class="about__room">
         <div class="about__lamp"></div>
         <div class="about__desk"></div>
         <img src="assets/logo.svg" alt="" class="about__monitor-logo">
       </div>
     </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section testimonials" id="testimonials">
+  <div class="section__head">
+    <div>
+      <p class="eyebrow">/ Testimonials</p>
+      <h2 class="section__title">Lo que <em>dicen</em></h2>
+    </div>
+    <p class="section__note">Marcas que confiaron en nosotros para su presencia digital.</p>
+  </div>
+  <div class="testi__grid">
+    <figure class="testi" data-cursor="hover">
+      <div class="testi__stars">★★★★★</div>
+      <blockquote>“Meridian transformó por completo nuestra web. El resultado superó cada expectativa: rápido, elegante y convierte muchísimo mejor.”</blockquote>
+      <figcaption><span class="testi__av">S</span><div><b>Sofía Rivera</b><small>CEO, Finova</small></div></figcaption>
+    </figure>
+    <figure class="testi" data-cursor="hover">
+      <div class="testi__stars">★★★★★</div>
+      <blockquote>“Profesionales de principio a fin. Entendieron nuestra marca y la llevaron a otro nivel. Volveríamos a trabajar con ellos sin dudarlo.”</blockquote>
+      <figcaption><span class="testi__av">M</span><div><b>Marcos León</b><small>Fundador, Voltex</small></div></figcaption>
+    </figure>
+    <figure class="testi" data-cursor="hover">
+      <div class="testi__stars">★★★★★</div>
+      <blockquote>“El proceso fue claro y colaborativo. Nuestra tasa de conversión subió un 40% tras el lanzamiento. Totalmente recomendados.”</blockquote>
+      <figcaption><span class="testi__av">A</span><div><b>Ana Duarte</b><small>CMO, Northline</small></div></figcaption>
+    </figure>
   </div>
 </section>
 
@@ -205,6 +276,10 @@
     <p class="section__note">Un proceso simple y colaborativo que entrega resultados excepcionales.</p>
   </div>
 
+  <svg class="process__line" viewBox="0 0 1000 20" preserveAspectRatio="none" aria-hidden="true">
+    <path id="procPath" d="M4 10 H996" fill="none" stroke="url(#pl)" stroke-width="2"/>
+    <defs><linearGradient id="pl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4B63F0"/><stop offset="1" stop-color="#6a7bff"/></linearGradient></defs>
+  </svg>
   <div class="process__grid">
     <div class="step"><span class="step__n">01</span><h3>Discovery</h3><p>Conocemos tus objetivos, audiencia y negocio.</p></div>
     <div class="step"><span class="step__n">02</span><h3>Strategy</h3><p>Creamos un plan claro para lograr el resultado correcto.</p></div>
@@ -213,6 +288,35 @@
     <div class="step"><span class="step__n">05</span><h3>Launch</h3><p>Lanzamos, optimizamos y apoyamos tu crecimiento.</p></div>
   </div>
   <div class="process__beam"></div>
+</section>
+
+<!-- FAQ -->
+<section class="section faq" id="faq">
+  <div class="section__head">
+    <div>
+      <p class="eyebrow">/ FAQ</p>
+      <h2 class="section__title">Preguntas <em>frecuentes</em></h2>
+    </div>
+    <p class="section__note">Todo lo que necesitas saber antes de empezar.</p>
+  </div>
+  <div class="faq__list">
+    <details class="faq__item" open>
+      <summary data-cursor="hover">¿Cuánto tarda un proyecto?<span class="faq__ic"></span></summary>
+      <p>Depende del alcance, pero un sitio web típico toma entre 3 y 6 semanas desde el discovery hasta el lanzamiento. Te damos un cronograma claro desde el primer día.</p>
+    </details>
+    <details class="faq__item">
+      <summary data-cursor="hover">¿Cuánto cuesta una página web?<span class="faq__ic"></span></summary>
+      <p>Cada proyecto es único. Trabajamos con presupuestos a medida según tus objetivos y funcionalidades. Agenda una llamada y te enviamos una propuesta detallada sin compromiso.</p>
+    </details>
+    <details class="faq__item">
+      <summary data-cursor="hover">¿Ofrecen mantenimiento después del lanzamiento?<span class="faq__ic"></span></summary>
+      <p>Sí. Ofrecemos planes de soporte y optimización continua para que tu web siga rápida, segura y actualizada mientras tu negocio crece.</p>
+    </details>
+    <details class="faq__item">
+      <summary data-cursor="hover">¿Con qué tecnologías trabajan?<span class="faq__ic"></span></summary>
+      <p>Usamos tecnologías modernas y de alto rendimiento adaptadas a cada proyecto: desde sitios estáticos ultrarrápidos hasta plataformas a medida, siempre optimizadas para SEO y velocidad.</p>
+    </details>
+  </div>
 </section>
 
 <!-- CONTACT -->

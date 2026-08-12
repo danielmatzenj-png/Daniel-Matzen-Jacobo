@@ -10,17 +10,25 @@ Estilo oscuro premium con acento azul, 100% en HTML/CSS/JS sin dependencias
 - `script.js` — interactividad
 - `assets/logo.svg` — logotipo "M" de Meridian
 
+## Secciones
+Hero · Marquee · Work · Clientes · Stats · Services · About · Testimonios ·
+Process · FAQ · Contacto · Footer
+
 ## Interacciones incluidas
-- Preloader con contador
-- Cursor personalizado con estados (hover / view)
-- Barra de progreso de scroll
-- Nav con blur al hacer scroll + menú móvil
-- Animaciones de revelado al hacer scroll (IntersectionObserver)
-- Contadores animados en las estadísticas
-- Efecto tilt 3D en tarjetas de proyectos y about
-- Parallax del glow de fondo y del visual del hero
-- Marquee infinito
-- Formulario de contacto con feedback
+- **Fondo de partículas** en el hero (canvas): red de nodos que se conecta y
+  reacciona al cursor
+- **Palabra rotativa con efecto scramble** en el título ("marcas / negocios / …")
+- **Parallax multicapa** al hacer scroll (`data-speed`) + hero que se escala y
+  desvanece al bajar
+- **Marquee reactivo a la velocidad de scroll** (acelera/invierte según te mueves)
+- **Revelados con clip-path** (barrido) en imágenes y con máscara en títulos
+- **Línea SVG que se dibuja** conectando los pasos del proceso
+- Preloader con contador · cursor personalizado con estado "VIEW" + rastro
+- Barra de progreso de scroll · nav con blur + menú móvil
+- Revelados escalonados al hacer scroll (IntersectionObserver)
+- Contadores animados · tilt 3D en tarjetas · botones magnéticos
+- FAQ acordeón · testimonios · formulario de contacto con feedback
+- Respeta `prefers-reduced-motion`
 
 ## Cómo verlo
 Abre `index.html` en el navegador, o sirve la carpeta:
