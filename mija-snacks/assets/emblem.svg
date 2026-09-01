@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 230" fill="currentColor" role="img" aria-label="MIJA Snacks">
+  <g fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round">
+    <path d="M18 196 C 60 150, 100 148, 128 168"/>
+    <path d="M22 216 C 66 168, 104 166, 128 186"/>
+    <path d="M242 196 C 200 150, 160 148, 132 168"/>
+    <path d="M238 216 C 194 168, 156 166, 132 186"/>
+  </g>
+  <path d="M130 176 C 108 172, 96 150, 100 120 C 118 132, 130 152, 130 176 Z"/>
+  <path d="M130 176 C 152 172, 164 150, 160 120 C 142 132, 130 152, 130 176 Z"/>
+  <path d="M130 44 C 118 60, 116 96, 130 118 C 144 96, 142 60, 130 44 Z" opacity=".18"/>
+  <circle cx="130" cy="56" r="6"/><circle cx="122" cy="66" r="5.5"/><circle cx="138" cy="66" r="5.5"/>
+  <circle cx="130" cy="72" r="6"/><circle cx="121" cy="82" r="5.5"/><circle cx="139" cy="82" r="5.5"/>
+  <circle cx="130" cy="88" r="6"/><circle cx="123" cy="99" r="5"/><circle cx="137" cy="99" r="5"/>
+  <circle cx="130" cy="106" r="5.5"/>
+  <g transform="translate(30 96)">
+    <path d="M4 34 C 20 20, 44 14, 60 22 C 52 30, 40 34, 30 34 C 44 40, 56 42, 66 40 C 54 52, 34 54, 20 46 C 24 54, 30 60, 38 64 C 22 64, 8 52, 4 34 Z"/>
+    <path d="M60 22 L 82 12 L 70 26 Z"/>
+    <path d="M6 8 C 14 14, 16 24, 12 32 C 4 26, 2 16, 6 8 Z"/>
+  </g>
+  <g transform="translate(168 92)">
+    <path d="M8 74 L 44 14 L 80 74 Z"/>
+    <path d="M32 42 L 44 26 L 56 42 L 49 40 L 44 46 L 39 40 Z" fill="#fff" opacity=".85"/>
+    <path d="M52 12 C 52 4, 64 2, 68 8 C 78 4, 88 12, 82 20 L 52 20 C 48 18, 48 14, 52 12 Z"/>
+  </g>
+</svg>

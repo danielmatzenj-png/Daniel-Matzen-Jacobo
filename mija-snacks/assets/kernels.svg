@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 170" role="img" aria-label="Maíz tostado">
+  <defs>
+    <radialGradient id="k1" cx="38%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#ffe08a"/>
+      <stop offset="45%" stop-color="#f6b323"/>
+      <stop offset="100%" stop-color="#d98317"/>
+    </radialGradient>
+    <linearGradient id="k2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c96a12"/>
+      <stop offset="100%" stop-color="#8a4409"/>
+    </linearGradient>
+  </defs>
+  <g stroke="#7a3d09" stroke-width="3">
+    <!-- back kernel -->
+    <g transform="translate(96 34) rotate(8)">
+      <path d="M0 -26 C 26 -26, 32 0, 26 20 C 20 34, -20 34, -26 20 C -32 0, -26 -26, 0 -26 Z" fill="url(#k1)"/>
+      <path d="M0 -20 C 4 -6, 4 12, 0 26" fill="none" stroke="url(#k2)" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <!-- left kernel -->
+    <g transform="translate(58 92) rotate(-14)">
+      <path d="M0 -28 C 28 -28, 34 0, 28 22 C 22 37, -22 37, -28 22 C -34 0, -28 -28, 0 -28 Z" fill="url(#k1)"/>
+      <path d="M0 -22 C 4 -6, 4 14, 0 28" fill="none" stroke="url(#k2)" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <!-- right kernel -->
+    <g transform="translate(140 96) rotate(16)">
+      <path d="M0 -28 C 28 -28, 34 0, 28 22 C 22 37, -22 37, -28 22 C -34 0, -28 -28, 0 -28 Z" fill="url(#k1)"/>
+      <path d="M0 -22 C 4 -6, 4 14, 0 28" fill="none" stroke="url(#k2)" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <!-- front kernel -->
+    <g transform="translate(100 126) rotate(-4)">
+      <path d="M0 -26 C 26 -26, 32 0, 26 20 C 20 34, -20 34, -26 20 C -32 0, -26 -26, 0 -26 Z" fill="url(#k1)"/>
+      <path d="M0 -20 C 4 -6, 4 12, 0 26" fill="none" stroke="url(#k2)" stroke-width="4" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

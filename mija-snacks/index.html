@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIJA Snacks · Crunchy Maíz Tostado</title>
+  <meta name="description" content="MIJA Snacks · Crunchy Maíz Tostado. Snacks de maíz tostado sin gluten, non-GMO, sin conservantes y veganos. Sabores Con Sal, BBQ y Chili-Limón.">
+  <meta name="theme-color" content="#0f1e50">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Progress bar -->
+  <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+  <!-- ===== NAV ===== -->
+  <header class="nav" id="nav">
+    <a href="#hero" class="nav__brand" aria-label="MIJA Snacks — inicio">
+      <span class="nav__emblem" data-emblem></span>
+      <span class="nav__name">MIJA<em>SNACKS</em></span>
+    </a>
+    <nav class="nav__links" aria-label="Principal">
+      <a href="#historia" data-i18n="nav.story">La marca</a>
+      <a href="#sabores" data-i18n="nav.flavors">Sabores</a>
+      <a href="#beneficios" data-i18n="nav.benefits">Beneficios</a>
+      <a href="#contacto" data-i18n="nav.contact">Contacto</a>
+    </nav>
+    <button class="lang-toggle" id="langToggle" aria-label="Cambiar idioma">
+      <span class="lang-toggle__opt is-active" data-lang="es">ES</span>
+      <span class="lang-toggle__sep">/</span>
+      <span class="lang-toggle__opt" data-lang="en">EN</span>
+    </button>
+    <button class="nav__burger" id="burger" aria-label="Menú" aria-expanded="false"><span></span><span></span><span></span></button>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" id="hero">
+    <div class="hero__bg" id="heroBg"></div>
+    <div class="hero__kernels" id="heroKernels" aria-hidden="true"></div>
+    <div class="hero__inner">
+      <p class="hero__eyebrow reveal" data-i18n="hero.eyebrow">Maíz tostado artesanal</p>
+      <h1 class="hero__title">
+        <span class="hero__crunchy reveal" style="--d:.05s">CRUNCHY</span>
+        <span class="hero__sub reveal" style="--d:.15s" data-i18n="hero.sub">MAÍZ TOSTADO</span>
+      </h1>
+      <p class="hero__lead reveal" style="--d:.25s" data-i18n="hero.lead">
+        El crujido perfecto en cada grano. Tres sabores irresistibles, cero culpa.
+      </p>
+      <div class="hero__cta reveal" style="--d:.35s">
+        <a href="#sabores" class="btn btn--solid" data-i18n="hero.ctaFlavors">Ver sabores</a>
+        <a href="#historia" class="btn btn--ghost" data-i18n="hero.ctaStory">Nuestra historia</a>
+      </div>
+      <ul class="hero__chips reveal" style="--d:.45s">
+        <li>Gluten Free</li><li>Non-GMO</li><li data-i18n="hero.chip3">0% Conservantes</li><li>Vegan</li>
+      </ul>
+    </div>
+    <a href="#historia" class="hero__scroll" aria-label="Desplázate">
+      <span data-i18n="hero.scroll">Desliza</span>
+      <span class="hero__scroll-mouse"></span>
+    </a>
+  </section>
+
+  <!-- ===== HISTORIA ===== -->
+  <section class="story" id="historia">
+    <div class="story__grid">
+      <div class="story__media reveal">
+        <span class="story__emblem" data-emblem></span>
+        <div class="story__ring"></div>
+      </div>
+      <div class="story__text">
+        <p class="kicker reveal" data-i18n="story.kicker">De la milpa a tu snack</p>
+        <h2 class="reveal" style="--d:.08s" data-i18n="story.title">Maíz de verdad, tostado a la perfección</h2>
+        <p class="reveal" style="--d:.16s" data-i18n="story.p1">
+          En MIJA Snacks seleccionamos granos de maíz enteros y los tostamos hasta lograr ese
+          crujido inconfundible. Sin fritura profunda, sin ingredientes raros: solo maíz, sabor y textura.
+        </p>
+        <p class="reveal" style="--d:.24s" data-i18n="story.p2">
+          Inspirados en el colibrí, la milpa y la montaña, celebramos el origen de cada grano
+          con un snack honesto que puedes disfrutar en cualquier momento del día.
+        </p>
+        <div class="story__stats">
+          <div class="stat reveal" style="--d:.30s"><span class="stat__num" data-count="3">0</span><span class="stat__lbl" data-i18n="story.stat1">Sabores</span></div>
+          <div class="stat reveal" style="--d:.38s"><span class="stat__num" data-count="115">0</span><span class="stat__lbl" data-i18n="story.stat2">Gramos por bolsa</span></div>
+          <div class="stat reveal" style="--d:.46s"><span class="stat__num" data-count="0" data-suffix="%">0</span><span class="stat__lbl" data-i18n="story.stat3">Conservantes</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SABORES ===== -->
+  <section class="flavors" id="sabores">
+    <div class="flavors__head">
+      <p class="kicker reveal" data-i18n="flavors.kicker">Elige tu antojo</p>
+      <h2 class="reveal" style="--d:.08s" data-i18n="flavors.title">Tres sabores, un mismo crunch</h2>
+    </div>
+
+    <!-- Flavor panels are injected + themed via data-flavor -->
+    <article class="flavor" data-flavor="sal">
+      <div class="flavor__bagwrap reveal-x">
+        <!-- POUCH -->
+        <div class="pouch pouch--sal" role="img" aria-label="Bolsa MIJA Crunchy Maíz Tostado Con Sal">
+          <div class="pouch__zip"></div>
+          <div class="pouch__body">
+            <span class="pouch__logo" data-emblem></span>
+            <span class="pouch__wordmark">MIJA<em>SNACKS</em></span>
+            <h3 class="pouch__crunchy">CRUNCHY</h3>
+            <span class="pouch__brush">MAIZ TOSTADO</span>
+            <span class="pouch__kernels" data-kernels></span>
+            <ul class="pouch__badges"><li>GF</li><li>NON GMO</li><li>0%</li><li>VEGAN</li></ul>
+          </div>
+          <div class="pouch__foot"><span class="pouch__flavor">CON SAL</span><span class="pouch__weight">4.06oz<br>(115g)</span></div>
+        </div>
+      </div>
+      <div class="flavor__info reveal">
+        <span class="flavor__tag" data-i18n="flavors.sal.tag">El clásico</span>
+        <h3 data-i18n="flavors.sal.name">Con Sal</h3>
+        <p data-i18n="flavors.sal.desc">El original. Maíz tostado con el punto justo de sal marina que resalta su sabor natural. Crujiente, adictivo y perfecto para cualquier momento.</p>
+        <ul class="flavor__notes">
+          <li data-i18n="flavors.sal.n1">Sal marina</li>
+          <li data-i18n="flavors.sal.n2">Sabor natural</li>
+          <li data-i18n="flavors.sal.n3">Crunch clásico</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="flavor flavor--reverse" data-flavor="bbq">
+      <div class="flavor__bagwrap reveal-x">
+        <div class="pouch pouch--bbq" role="img" aria-label="Bolsa MIJA Crunchy Maíz Tostado BBQ">
+          <div class="pouch__zip"></div>
+          <div class="pouch__body">
+            <span class="pouch__logo" data-emblem></span>
+            <span class="pouch__wordmark">MIJA<em>SNACKS</em></span>
+            <h3 class="pouch__crunchy">CRUNCHY</h3>
+            <span class="pouch__brush">MAIZ TOSTADO</span>
+            <span class="pouch__kernels" data-kernels></span>
+            <ul class="pouch__badges"><li>GF</li><li>NON GMO</li><li>0%</li><li>VEGAN</li></ul>
+          </div>
+          <div class="pouch__foot"><span class="pouch__flavor">BBQ</span><span class="pouch__weight">4.06oz<br>(115g)</span></div>
+        </div>
+      </div>
+      <div class="flavor__info reveal">
+        <span class="flavor__tag" data-i18n="flavors.bbq.tag">Ahumado</span>
+        <h3 data-i18n="flavors.bbq.name">BBQ</h3>
+        <p data-i18n="flavors.bbq.desc">Un abrazo ahumado y dulce-picante. Notas de barbacoa que envuelven cada grano para una experiencia intensa y llena de carácter.</p>
+        <ul class="flavor__notes">
+          <li data-i18n="flavors.bbq.n1">Ahumado</li>
+          <li data-i18n="flavors.bbq.n2">Dulce-picante</li>
+          <li data-i18n="flavors.bbq.n3">Intenso</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="flavor" data-flavor="chili">
+      <div class="flavor__bagwrap reveal-x">
+        <div class="pouch pouch--chili" role="img" aria-label="Bolsa MIJA Crunchy Maíz Tostado Chili-Limón">
+          <div class="pouch__zip"></div>
+          <div class="pouch__body">
+            <span class="pouch__logo" data-emblem></span>
+            <span class="pouch__wordmark">MIJA<em>SNACKS</em></span>
+            <h3 class="pouch__crunchy">CRUNCHY</h3>
+            <span class="pouch__brush">MAIZ TOSTADO</span>
+            <span class="pouch__kernels" data-kernels></span>
+            <ul class="pouch__badges"><li>GF</li><li>NON GMO</li><li>0%</li><li>VEGAN</li></ul>
+          </div>
+          <div class="pouch__foot"><span class="pouch__flavor">CHILI-LIMÓN</span><span class="pouch__weight">4.06oz<br>(115g)</span></div>
+        </div>
+      </div>
+      <div class="flavor__info reveal">
+        <span class="flavor__tag" data-i18n="flavors.chili.tag">Picante</span>
+        <h3 data-i18n="flavors.chili.name">Chili-Limón</h3>
+        <p data-i18n="flavors.chili.desc">El favorito atrevido. Chile vibrante y limón fresco en equilibrio perfecto: un chispazo ácido y picante que despierta el paladar.</p>
+        <ul class="flavor__notes">
+          <li data-i18n="flavors.chili.n1">Chile vibrante</li>
+          <li data-i18n="flavors.chili.n2">Limón fresco</li>
+          <li data-i18n="flavors.chili.n3">Ácido y picante</li>
+        </ul>
+      </div>
+    </article>
+  </section>
+
+  <!-- ===== BENEFICIOS ===== -->
+  <section class="benefits" id="beneficios">
+    <div class="benefits__head">
+      <p class="kicker reveal" data-i18n="benefits.kicker">Snack sin remordimientos</p>
+      <h2 class="reveal" style="--d:.08s" data-i18n="benefits.title">Bueno por donde lo mires</h2>
+    </div>
+    <div class="benefits__grid">
+      <div class="benefit reveal" style="--d:.05s">
+        <div class="benefit__icon" data-icon="gf"></div>
+        <h3 data-i18n="benefits.gf.t">Gluten Free</h3>
+        <p data-i18n="benefits.gf.d">Sin gluten, apto para dietas sensibles.</p>
+      </div>
+      <div class="benefit reveal" style="--d:.13s">
+        <div class="benefit__icon" data-icon="gmo"></div>
+        <h3 data-i18n="benefits.gmo.t">Non-GMO</h3>
+        <p data-i18n="benefits.gmo.d">Maíz no modificado genéticamente.</p>
+      </div>
+      <div class="benefit reveal" style="--d:.21s">
+        <div class="benefit__icon" data-icon="zero"></div>
+        <h3 data-i18n="benefits.zero.t">0% Conservantes</h3>
+        <p data-i18n="benefits.zero.d">Sin conservantes ni aditivos artificiales.</p>
+      </div>
+      <div class="benefit reveal" style="--d:.29s">
+        <div class="benefit__icon" data-icon="vegan"></div>
+        <h3 data-i18n="benefits.vegan.t">100% Vegano</h3>
+        <p data-i18n="benefits.vegan.d">De origen vegetal, para todos.</p>
+      </div>
+    </div>
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track" id="marquee"></div>
+    </div>
+  </section>
+
+  <!-- ===== CTA / CONTACTO ===== -->
+  <section class="contact" id="contacto">
+    <div class="contact__inner reveal">
+      <span class="contact__emblem" data-emblem></span>
+      <h2 data-i18n="contact.title">¿Quieres MIJA en tu tienda?</h2>
+      <p data-i18n="contact.lead">Somos una marca en crecimiento. Escríbenos para pedidos, distribución o alianzas mayoristas.</p>
+      <div class="contact__actions">
+        <a class="btn btn--solid" href="mailto:hola@mijasnacks.com" data-i18n="contact.email">hola@mijasnacks.com</a>
+        <a class="btn btn--ghost" href="#" data-i18n="contact.wholesale">Ser distribuidor</a>
+      </div>
+      <div class="contact__social">
+        <a href="#" aria-label="Instagram" data-social="ig"></a>
+        <a href="#" aria-label="TikTok" data-social="tt"></a>
+        <a href="#" aria-label="Facebook" data-social="fb"></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="footer__brand">
+      <span class="footer__emblem" data-emblem></span>
+      <span class="nav__name">MIJA<em>SNACKS</em></span>
+    </div>
+    <p class="footer__tag" data-i18n="footer.tag">Crunchy Maíz Tostado · Hecho con maíz de verdad</p>
+    <p class="footer__legal">© <span id="year"></span> MIJA Snacks. <span data-i18n="footer.rights">Todos los derechos reservados.</span></p>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

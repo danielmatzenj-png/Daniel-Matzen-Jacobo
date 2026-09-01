@@ -1,0 +1,107 @@
+/* Bilingual dictionary — MIJA Snacks */
+window.MIJA_I18N = {
+  es: {
+    "nav.story": "La marca",
+    "nav.flavors": "Sabores",
+    "nav.benefits": "Beneficios",
+    "nav.contact": "Contacto",
+
+    "hero.eyebrow": "Maíz tostado artesanal",
+    "hero.sub": "MAÍZ TOSTADO",
+    "hero.lead": "El crujido perfecto en cada grano. Tres sabores irresistibles, cero culpa.",
+    "hero.ctaFlavors": "Ver sabores",
+    "hero.ctaStory": "Nuestra historia",
+    "hero.chip3": "0% Conservantes",
+    "hero.scroll": "Desliza",
+
+    "story.kicker": "De la milpa a tu snack",
+    "story.title": "Maíz de verdad, tostado a la perfección",
+    "story.p1": "En MIJA Snacks seleccionamos granos de maíz enteros y los tostamos hasta lograr ese crujido inconfundible. Sin fritura profunda, sin ingredientes raros: solo maíz, sabor y textura.",
+    "story.p2": "Inspirados en el colibrí, la milpa y la montaña, celebramos el origen de cada grano con un snack honesto que puedes disfrutar en cualquier momento del día.",
+    "story.stat1": "Sabores",
+    "story.stat2": "Gramos por bolsa",
+    "story.stat3": "Conservantes",
+
+    "flavors.kicker": "Elige tu antojo",
+    "flavors.title": "Tres sabores, un mismo crunch",
+    "flavors.sal.tag": "El clásico",
+    "flavors.sal.name": "Con Sal",
+    "flavors.sal.desc": "El original. Maíz tostado con el punto justo de sal marina que resalta su sabor natural. Crujiente, adictivo y perfecto para cualquier momento.",
+    "flavors.sal.n1": "Sal marina", "flavors.sal.n2": "Sabor natural", "flavors.sal.n3": "Crunch clásico",
+    "flavors.bbq.tag": "Ahumado",
+    "flavors.bbq.name": "BBQ",
+    "flavors.bbq.desc": "Un abrazo ahumado y dulce-picante. Notas de barbacoa que envuelven cada grano para una experiencia intensa y llena de carácter.",
+    "flavors.bbq.n1": "Ahumado", "flavors.bbq.n2": "Dulce-picante", "flavors.bbq.n3": "Intenso",
+    "flavors.chili.tag": "Picante",
+    "flavors.chili.name": "Chili-Limón",
+    "flavors.chili.desc": "El favorito atrevido. Chile vibrante y limón fresco en equilibrio perfecto: un chispazo ácido y picante que despierta el paladar.",
+    "flavors.chili.n1": "Chile vibrante", "flavors.chili.n2": "Limón fresco", "flavors.chili.n3": "Ácido y picante",
+
+    "benefits.kicker": "Snack sin remordimientos",
+    "benefits.title": "Bueno por donde lo mires",
+    "benefits.gf.t": "Gluten Free", "benefits.gf.d": "Sin gluten, apto para dietas sensibles.",
+    "benefits.gmo.t": "Non-GMO", "benefits.gmo.d": "Maíz no modificado genéticamente.",
+    "benefits.zero.t": "0% Conservantes", "benefits.zero.d": "Sin conservantes ni aditivos artificiales.",
+    "benefits.vegan.t": "100% Vegano", "benefits.vegan.d": "De origen vegetal, para todos.",
+
+    "contact.title": "¿Quieres MIJA en tu tienda?",
+    "contact.lead": "Somos una marca en crecimiento. Escríbenos para pedidos, distribución o alianzas mayoristas.",
+    "contact.email": "hola@mijasnacks.com",
+    "contact.wholesale": "Ser distribuidor",
+
+    "footer.tag": "Crunchy Maíz Tostado · Hecho con maíz de verdad",
+    "footer.rights": "Todos los derechos reservados."
+  },
+  en: {
+    "nav.story": "Brand",
+    "nav.flavors": "Flavors",
+    "nav.benefits": "Benefits",
+    "nav.contact": "Contact",
+
+    "hero.eyebrow": "Craft toasted corn",
+    "hero.sub": "TOASTED CORN",
+    "hero.lead": "The perfect crunch in every kernel. Three irresistible flavors, zero guilt.",
+    "hero.ctaFlavors": "See flavors",
+    "hero.ctaStory": "Our story",
+    "hero.chip3": "0% Preservatives",
+    "hero.scroll": "Scroll",
+
+    "story.kicker": "From the field to your snack",
+    "story.title": "Real corn, toasted to perfection",
+    "story.p1": "At MIJA Snacks we select whole corn kernels and toast them to that unmistakable crunch. No deep frying, no weird ingredients: just corn, flavor and texture.",
+    "story.p2": "Inspired by the hummingbird, the cornfield and the mountain, we celebrate the origin of every kernel with an honest snack you can enjoy any time of day.",
+    "story.stat1": "Flavors",
+    "story.stat2": "Grams per bag",
+    "story.stat3": "Preservatives",
+
+    "flavors.kicker": "Pick your craving",
+    "flavors.title": "Three flavors, one crunch",
+    "flavors.sal.tag": "The classic",
+    "flavors.sal.name": "With Salt",
+    "flavors.sal.desc": "The original. Toasted corn with just the right touch of sea salt to bring out its natural flavor. Crunchy, addictive and perfect any time.",
+    "flavors.sal.n1": "Sea salt", "flavors.sal.n2": "Natural taste", "flavors.sal.n3": "Classic crunch",
+    "flavors.bbq.tag": "Smoky",
+    "flavors.bbq.name": "BBQ",
+    "flavors.bbq.desc": "A smoky, sweet-and-spicy hug. Barbecue notes wrap around every kernel for an intense, full-of-character experience.",
+    "flavors.bbq.n1": "Smoky", "flavors.bbq.n2": "Sweet-spicy", "flavors.bbq.n3": "Intense",
+    "flavors.chili.tag": "Spicy",
+    "flavors.chili.name": "Chili-Lime",
+    "flavors.chili.desc": "The bold favorite. Vibrant chili and fresh lime in perfect balance: a tangy, spicy spark that wakes up your palate.",
+    "flavors.chili.n1": "Vibrant chili", "flavors.chili.n2": "Fresh lime", "flavors.chili.n3": "Tangy & spicy",
+
+    "benefits.kicker": "Snack without regret",
+    "benefits.title": "Good from every angle",
+    "benefits.gf.t": "Gluten Free", "benefits.gf.d": "No gluten, great for sensitive diets.",
+    "benefits.gmo.t": "Non-GMO", "benefits.gmo.d": "Non-genetically modified corn.",
+    "benefits.zero.t": "0% Preservatives", "benefits.zero.d": "No preservatives or artificial additives.",
+    "benefits.vegan.t": "100% Vegan", "benefits.vegan.d": "Plant-based, for everyone.",
+
+    "contact.title": "Want MIJA in your store?",
+    "contact.lead": "We're a growing brand. Reach out for orders, distribution or wholesale partnerships.",
+    "contact.email": "hola@mijasnacks.com",
+    "contact.wholesale": "Become a distributor",
+
+    "footer.tag": "Crunchy Toasted Corn · Made with real corn",
+    "footer.rights": "All rights reserved."
+  }
+};
